@@ -1,0 +1,21 @@
+---
+layout: default
+title: Mat's Personal Note
+---
+<h1>Mat's Personal Note</h1>
+<div class="subtitle">
+  Hello, my name is Matias Alvin.
+  This is my note on my journey as a software engineer.
+  You can contact me through my <a href="mailto:contact@matiasalvin.dev">email</a>.
+  You can also find me on my <a href="https://github.com/alvinmatias69/">github</a> and <a href="https://twitter.com/matiasalvin">twitter</a>.
+  Enjoy your stay!
+</div>
+<hr/>
+
+{% for post in site.posts %}
+    <br/>
+    <h2><a href="{{ post.url }}">{{ post.title }}</a></h2>
+    {{ post.excerpt }}
+    <span class="post_date">{{ post.date | date_to_string }} - {{ post.author }}</span>
+    <br/>
+{% endfor %}
