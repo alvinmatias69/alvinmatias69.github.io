@@ -1,3 +1,10 @@
+@media screen and (max-width: 800px) {
+    body {
+        max-width: none;
+        margin: 0 auto;
+    }
+}
+
 html {
     background-color: #EEE;
 }
