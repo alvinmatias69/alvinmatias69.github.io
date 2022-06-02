@@ -39,3 +39,41 @@ a:visited {
     font-size: 15px;
     color: rgba(69,69,69,0.9);
 }
+
+/* pre code { */
+/*     background-color: #272822; */
+/*     border-radius: 0.3rem; */
+/*     padding: 4px 5px 5px; */
+/*     white-space: inherit; */
+/* } */
+pre {
+    background-color: #272822;
+    padding: 5px;
+    padding-left: 10px;
+    white-space: break-spaces;
+    border-radius: 0.3em;
+}
+
+pre code {
+    color: #f8f8f2;
+}
+
+blockquote {
+    background: rgba(0,0,0,0.01);
+    border-left: 6px solid #ccc;
+    margin: 1.5em 10px;
+    padding: 0.5em 10px;
+    quotes: "\201C""\201D""\2018""\2019";
+    font-size: 16px;
+    color: rgba(69,69,69,0.8);
+}
+
+blockquote p {
+    display: inline;
+}
+
+video {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
