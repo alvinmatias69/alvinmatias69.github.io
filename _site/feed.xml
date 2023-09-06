@@ -1,4 +1,268 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2022-09-18T11:35:47+07:00</updated><id>/feed.xml</id><entry><title type="html">Reviving My Old Laptop</title><link href="/posts/laptop-revival" rel="alternate" type="text/html" title="Reviving My Old Laptop" /><published>2022-09-17T00:00:00+07:00</published><updated>2022-09-17T00:00:00+07:00</updated><id>/posts/laptop-revival</id><content type="html" xml:base="/posts/laptop-revival"><![CDATA[<p>Nowadays, most people will choose to buy a new electronic device rather than fix their broken device. Most devices are difficult to fix and it’s not cheap either. Hence, most people might feel like it’s not worth fixing it. So, why do I choose to fix mine?</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2023-09-07T00:05:27+07:00</updated><id>/feed.xml</id><entry><title type="html">Writing cgentest: Table Test Generator for C</title><link href="/posts/writing-cgentest" rel="alternate" type="text/html" title="Writing cgentest: Table Test Generator for C" /><published>2023-09-07T00:00:00+07:00</published><updated>2023-09-07T00:00:00+07:00</updated><id>/posts/writing-cgentest</id><content type="html" xml:base="/posts/writing-cgentest"><![CDATA[<p>Usually, I use test driven development (TDD) approach when I’m writing a software project.
+In golang (language that I used to writes daily) there’s this neat library that really helps me to do that, <a href="https://github.com/cweill/gotests">Gotests</a>.
+Gotests is a simple library that generates a boilerplate for testing, it really helps me on writing tested go project.</p>
+
+<p>Unfortunately, there’s no such libraries in c.
+While there’s plenty of unit testing libraries, I’m unable to find the one that simply generate a helper boilerplate.
+So, I decided to write one myself.
+<!--more--></p>
+
+<p>What I thought to be a simple project that can be done in a month, turns out is a long journey.
+It’s not that the project is a tall mountain, rather it’s a dense forest.
+There’s so many problems that I didn’t understand how to solve.
+Safe to say, I had spend maybe 80% of times writing this project learning things.
+And I don’t regret it, not even a bit!</p>
+
+<h1 id="introduction">Introduction</h1>
+
+<p>Writing test considered as chores for most programmers, it’s not that uncommon for programmers to skip out on writing test.
+But, regardless of that, most of them will agree that test is important.
+It’s the most quick and certain way to do sanity check on a software project.</p>
+
+<p>There are multiple type of test methodologies available.
+One of them is Data-driven / Table-driven testing.
+Table-driven testing is a method to write test specifications (input, output, condition, etc) in a “table” entries to later be tested iteratively.
+To quote <a href="https://github.com/golang/go/wiki/TableDrivenTests">golang wiki</a> on Table-driven tests, “Table driven testing is not a tool, package or anything else, it’s just a way and perspective to write cleaner tests.”.</p>
+
+<p>Personally, I really like Table-driven testing.
+It allows me to write simple but detailed tests, while also served as some sort of documentation.
+The main drawback is it’s mainly tailored for unit testing, so it’s not easy if you want to use it for anything else (e.g. integration test).</p>
+
+<p>I’m unable to find any similar tools to generate the boilerplate for C.
+As I’ve mentioned in my previous post, I’m currently learning to writes in C.
+And I think that, the existence of this tools will help me greatly on that.
+So I write this small tool to solve that problem, <a href="https://github.com/alvinmatias69/cgentest">cgentest</a>.</p>
+
+<h1 id="glossaries">Glossaries</h1>
+
+<p>Quick summaries of tools referenced in this project.
+You can skip this section if you’re already familiar with these tools.</p>
+
+<h2 id="ctags">Ctags</h2>
+
+<p><code class="language-plaintext highlighter-rouge">ctags</code> is a tool to generates an index (or tag) file of language objects found in source files for programming languages. 
+This index is then used by text editors or other tools to handle the indexed item.
+This project utilize <a href="https://ctags.io/"><code class="language-plaintext highlighter-rouge">universal ctags</code></a> (abbreviated as u-ctags), a maintained implementation of <code class="language-plaintext highlighter-rouge">ctags</code>.</p>
+
+<h2 id="mustache">Mustache</h2>
+
+<p><a href="https://mustache.github.io/"><code class="language-plaintext highlighter-rouge">Mustache</code></a> is a <em>logic-less</em> template system. It works by expanding tags in a template using values provided.</p>
+
+<h2 id="json">JSON</h2>
+<p><code class="language-plaintext highlighter-rouge">JavaScript Object Notation</code> (<code class="language-plaintext highlighter-rouge">JSON</code>), is a file and data interchange text format consists of key-value pairs and arrays. 
+It’s mainly used in web applications, but its usage is really broad and aplicable to any software projects.</p>
+
+<h2 id="autotools">Autotools</h2>
+
+<p>The <a href="https://www.gnu.org/software/automake/faq/autotools-faq.html">GNU Autotools</a> (also known as GNU Build System), is a suite of programming tools designed to assist in making portable source code packages in Unix-like systems.</p>
+
+<h1 id="writing-cgentest">Writing cgentest</h1>
+
+<p>A quick and simple explanation of cgentest process can be described as follows.</p>
+<ol>
+  <li>Read a c file and extract the function metadata (function name, parameters, return type)</li>
+  <li>Map the function data into boilerplate data-driven test of that file, Preferably into a customizable template.</li>
+  <li>Output the generated boilerplate.</li>
+</ol>
+
+<p><img src="/assets/images/writing-cgentest/simple_cgentest_flow.png" alt="Simple flowchart of cgentest" width="100%" /></p>
+
+<p>While it looks simple, each of the steps has their own difficulties that has to be solved.</p>
+
+<h2 id="extracting-c-functions-metadata">Extracting C Functions Metadata</h2>
+
+<p>At first, I tried to use a finite state machine (fsm) to solve this.
+By using fsm, I mean that I start by tokenizing the source file.
+Those tokens then will be passed to the fsm to be parsed and relevant data will then extracted.</p>
+
+<p>I quickly realize the flaw of this approach though.</p>
+<ul>
+  <li>It’s prone to error. 
+Need to make a very detailed fsm to generate an accurate data.</li>
+  <li>The scope is too big. 
+It’s more like writing parser at this point. 
+Which is not the main objective of this project.</li>
+</ul>
+
+<p>Then, I found universal ctags, which is perfect for this project.</p>
+<ul>
+  <li>Its usage fits perfectly for the project requirement.</li>
+  <li>Has a c library to read its result (<a href="https://github.com/universal-ctags/libreadtags">libreadtags</a>), no need to parse too much.</li>
+</ul>
+
+<p>But, it’s not that this approach is without a flaw.</p>
+<ul>
+  <li>The project is now depend on a third party library.</li>
+  <li>ctags binary is required and will be executed by the project.</li>
+  <li>Still need to parse from libreadtags, albeit not as much.</li>
+</ul>
+
+<p>After weighing my options, I decided to go with universal ctags.
+As it’s more aligned with my goals to learning to write C, without delve too deep into technicalities.</p>
+
+<p><img src="/assets/images/writing-cgentest/cgentest_ctags_sequence_diagram.png" alt="Sequence diagram relations between cgentest, ctags, and libreadtags" width="100%" /></p>
+
+<h2 id="writing-the-generated-boilerplate">Writing the Generated Boilerplate</h2>
+
+<p>Outputing the result can be done simply using string formating and some conditionals.
+But, this approach has several drawbacks.</p>
+<ul>
+  <li>It’s hard to make any changes later.</li>
+  <li>The code will be cluttered and hard to read.</li>
+  <li>More importantly, it’s hard to gives option of custom template for user.</li>
+</ul>
+
+<p>Considering my requirements, I decide to use <code class="language-plaintext highlighter-rouge">Mustache</code> template system.
+More specifically, I’m using <a href="https://gitlab.com/jobol/mustach">mustach</a> a c library for <code class="language-plaintext highlighter-rouge">mustache</code> template.</p>
+<ul>
+  <li>Simple to use</li>
+  <li>Still maintained</li>
+  <li>Support several json libraries
+    <ul>
+      <li><a href="https://github.com/DaveGamble/cJSON">cJSON</a></li>
+      <li><a href="https://github.com/akheron/jansson">jansson</a></li>
+      <li><a href="https://github.com/json-c/json-c">json-c</a></li>
+    </ul>
+  </li>
+</ul>
+
+<p>To elaborates on my last point, what does <code class="language-plaintext highlighter-rouge">json</code> got to do with <code class="language-plaintext highlighter-rouge">mustache</code>?
+Well, it’s plenty. You see, <code class="language-plaintext highlighter-rouge">mustache</code> originally is a web template and usually paired with <code class="language-plaintext highlighter-rouge">json</code> as its data provider.
+<code class="language-plaintext highlighter-rouge">Mustach</code> itself relies on json libraries to aggregate the data into any <code class="language-plaintext highlighter-rouge">mustache</code> template.</p>
+
+<p>To utilize <code class="language-plaintext highlighter-rouge">mustach</code> in a project, we can work in this step.</p>
+<ol>
+  <li>Map the data into a json representation using one of the supported library.</li>
+  <li>Fed the data into mustach with its respective method (e.g. if using jansson, then we will be using <code class="language-plaintext highlighter-rouge">mustach_jansson_file</code>).</li>
+</ol>
+
+<p>We can simply support one library and be done with it.
+But, I decide to support all three libraries.</p>
+
+<h2 id="packaging-for-release">Packaging for Release</h2>
+
+<p>I do have several experiences on releasing software. 
+But, usually I did that through the language package manager (<code class="language-plaintext highlighter-rouge">npm js</code>, <code class="language-plaintext highlighter-rouge">cargo rust</code>, <code class="language-plaintext highlighter-rouge">golang mod</code>).</p>
+
+<p>While C doesn’t have a universal package manager, there are several build system that accomodate this.</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">cmake</code></li>
+  <li><code class="language-plaintext highlighter-rouge">meson</code></li>
+  <li><code class="language-plaintext highlighter-rouge">GNU autotools</code></li>
+  <li>etc</li>
+</ul>
+
+<p>So, I then decide to use autotools, because:</p>
+<ul>
+  <li>No dependency needed (except dependency for the cgentest itself).</li>
+  <li>I have used projects that utilize autotools many times in the past. Yet, never know how to use autotools in a project.</li>
+</ul>
+
+<p>The problem is, autotools isn’t as easy to use as other modern build system.
+There are not many resources to learn it in the internet too.
+Most of it only explain the very simple usage or some pretty specific problem.
+In hindsight, most of it answered my project use case. But, at the time I still hasn’t grasps the concept of autotools yet.</p>
+
+<p>Fortunately, I found a great book that explain things in detail.
+The book’s name is <code class="language-plaintext highlighter-rouge">Autotools</code> by John Calcote.
+It’s a pretty good book, I spent several months reading it until I understand the basic concept of it.
+I’m not claiming myself has mastered autotools, but it’s good enought to implement it in my project.</p>
+
+<p>You know, people said that the best way to learn something is to learning by doing, so I did just that.
+I decide to fully refactor the cgentest project to utilize <code class="language-plaintext highlighter-rouge">Autotools</code>.
+Instead of using git submodule and compile the library together with the core code, I’m using shared linking libraries.
+All three json libraries are supported for flexibility and use conditional compilation based on user choice.</p>
+
+<p><img src="/assets/images/writing-cgentest/json_lib_diagram.png" alt="JSON libraries link flow" width="25%" /></p>
+
+<p>The order by no means signify anything.
+It’s just the order of the implementation done in this project.</p>
+
+<h2 id="putting-it-all-together">Putting it All Together</h2>
+
+<p>Now the cgentest is finished, let’s take a look at the complete product.
+Given a C file with name <code class="language-plaintext highlighter-rouge">example.c</code></p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="nf">simple</span><span class="p">(</span><span class="n">bool</span> <span class="n">is_active</span><span class="p">)</span> <span class="p">{...}</span>
+</code></pre></div></div>
+
+<p>Run through cgentest, it will resulting in.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">"example.c"</span><span class="cp">
+#include</span> <span class="cpf">&lt;stdlib.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span>
+
+<span class="kt">void</span> <span class="nf">simple_test</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="p">{</span>
+        <span class="kt">char</span> <span class="n">name</span><span class="p">[</span><span class="mi">100</span><span class="p">];</span>
+        <span class="k">struct</span> <span class="p">{</span>
+            <span class="n">bool</span> <span class="n">is_active</span><span class="p">;</span>
+        <span class="p">}</span> <span class="n">parameters</span><span class="p">;</span>
+        <span class="kt">int</span> <span class="n">expected</span><span class="p">;</span>
+    <span class="p">}</span> <span class="n">tests</span><span class="p">[]</span> <span class="o">=</span> <span class="p">{</span>
+
+    <span class="p">};</span>
+
+    <span class="kt">size_t</span> <span class="n">length</span> <span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">tests</span><span class="p">)</span> <span class="o">/</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">tests</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="n">length</span><span class="p">;</span> <span class="n">idx</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">"Running simple_test: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">tests</span><span class="p">[</span><span class="n">idx</span><span class="p">].</span><span class="n">name</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">tests</span><span class="p">[</span><span class="n">idx</span><span class="p">].</span><span class="n">expected</span> <span class="o">==</span> <span class="n">simple</span><span class="p">(</span><span class="n">tests</span><span class="p">[</span><span class="n">idx</span><span class="p">].</span><span class="n">parameters</span><span class="p">.</span><span class="n">is_active</span><span class="p">))</span> <span class="p">{</span>
+            <span class="n">printf</span><span class="p">(</span><span class="s">"</span><span class="se">\t</span><span class="s">=== Success ===</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+        <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+            <span class="n">printf</span><span class="p">(</span><span class="s">"</span><span class="se">\t</span><span class="s">=== Failure ===</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>From there, we can add test case entry in <code class="language-plaintext highlighter-rouge">tests</code> array. Pretty neat right?
+As you can see, cgentest only generate boilerplate.
+I’ve stated it before, but let me reiterate. 
+The table-driven tests is a methodoloy, rather than a tool.
+It resulting in much more flexibility in testing.</p>
+
+<p>By default, cgentest is using a simple comparison.
+But nothing stopping the user to use more sophisticated comparison library like <code class="language-plaintext highlighter-rouge">assert.h</code>.
+The user can even use any unit testing libraries in tandem with cgentest.
+In fact, cgentest project utilize <code class="language-plaintext highlighter-rouge">Autotest</code> for its unit testing library, in collaboration with boilerplate generated by cgentest itself.</p>
+
+<h1 id="conclusion">Conclusion</h1>
+
+<p>Now the project is finished, I’m very satisfied the result.
+In all honesty, the project is far from perfect. 
+Now I look back at it again, I can think of several improvements to the project.</p>
+<ul>
+  <li>Support for multiple files generation.</li>
+  <li>Support for minimal dependencies, it’s possible only to depend on <code class="language-plaintext highlighter-rouge">ctags</code> and <code class="language-plaintext highlighter-rouge">libreadtags</code>.</li>
+</ul>
+
+<p>While working on cgentest, I’ve learned so many things.</p>
+<ul>
+  <li>How to use autotools suite.</li>
+  <li>Utilize shared libraries.</li>
+  <li>Debugging c program using gdb.</li>
+  <li>Checking memleak using valgrind.</li>
+</ul>
+
+<p>For the next project will try to make something simple and short.
+Either make a simple library to “complete” my journey of learning <code class="language-plaintext highlighter-rouge">autotools</code>.
+Or make editor extension for cgentest, especially for emacs.</p>
+
+<h1 id="recommended-resources">Recommended Resources</h1>
+
+<p>Below are resources that are very useful through the writing of cgentest. 
+I’m not endorsed by any of them.
+I just like their content and want to share it with my reader.</p>
+<ul>
+  <li>“Autotools, 2nd Edition: A Practitioner’s Guide to GNU Autoconf, Automake, and Libtool” book by John Calcote</li>
+  <li>autotools gnu web documentation
+    <ul>
+      <li><a href="https://www.gnu.org/software/automake/">Automake</a></li>
+      <li><a href="https://www.gnu.org/software/autoconf/">Autoconf</a></li>
+      <li><a href="https://www.gnu.org/software/autoconf/manual/autoconf-2.67/html_node/Using-Autotest.html">Autotest</a></li>
+    </ul>
+  </li>
+  <li>“How to Debug C Program using gdb in 6 Simple Steps” <a href="https://u.osu.edu/cstutorials/2018/09/28/how-to-debug-c-program-using-gdb-in-6-simple-steps/">blog</a> by Muhammed Emin Ozturk</li>
+</ul>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[Usually, I use test driven development (TDD) approach when I’m writing a software project. In golang (language that I used to writes daily) there’s this neat library that really helps me to do that, Gotests. Gotests is a simple library that generates a boilerplate for testing, it really helps me on writing tested go project. Unfortunately, there’s no such libraries in c. While there’s plenty of unit testing libraries, I’m unable to find the one that simply generate a helper boilerplate. So, I decided to write one myself.]]></summary></entry><entry><title type="html">Reviving My Old Laptop</title><link href="/posts/laptop-revival" rel="alternate" type="text/html" title="Reviving My Old Laptop" /><published>2022-09-17T00:00:00+07:00</published><updated>2022-09-17T00:00:00+07:00</updated><id>/posts/laptop-revival</id><content type="html" xml:base="/posts/laptop-revival"><![CDATA[<p>Nowadays, most people will choose to buy a new electronic device rather than fix their broken device. Most devices are difficult to fix and it’s not cheap either. Hence, most people might feel like it’s not worth fixing it. So, why do I choose to fix mine?</p>
 
 <!--more-->
 
