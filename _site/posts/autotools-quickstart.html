@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Autotools Quickstart</title>
+        <link rel="stylesheet" href="/assets/css/styles.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+        <link rel="manifest" href="/assets/images/site.webmanifest">
+        <link rel="mask-icon" href="/assets/images/safari-pinned-tab.svg" color="#5bbad5">
+        <link rel="shortcut icon" href="/assets/images/favicon.ico">
+        <meta name="msapplication-TileColor" content="#da532c">
+        <meta name="msapplication-config" content="/assets/images/browserconfig.xml">
+        <meta name="theme-color" content="#ffffff">
+        <link type="application/atom+xml" rel="alternate" href="/feed.xml" />
+        <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Autotools Quickstart</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="Autotools Quickstart" />
+<meta name="author" content="mat" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="On my last post I talked about writing a test generator utilising autotools suite for its build system and packaging. Since then, I’ve been writing some software using autotools. But, everytime I need to reread the reference book or take a peek at my last project before I can start writing. So, I figure that writing a quickstart of using autotools will be helpful for future me!" />
+<meta property="og:description" content="On my last post I talked about writing a test generator utilising autotools suite for its build system and packaging. Since then, I’ve been writing some software using autotools. But, everytime I need to reread the reference book or take a peek at my last project before I can start writing. So, I figure that writing a quickstart of using autotools will be helpful for future me!" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2024-03-24T00:00:00+07:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Autotools Quickstart" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"mat"},"dateModified":"2024-03-24T00:00:00+07:00","datePublished":"2024-03-24T00:00:00+07:00","description":"On my last post I talked about writing a test generator utilising autotools suite for its build system and packaging. Since then, I’ve been writing some software using autotools. But, everytime I need to reread the reference book or take a peek at my last project before I can start writing. So, I figure that writing a quickstart of using autotools will be helpful for future me!","headline":"Autotools Quickstart","mainEntityOfPage":{"@type":"WebPage","@id":"/posts/autotools-quickstart"},"url":"/posts/autotools-quickstart"}</script>
+<!-- End Jekyll SEO tag -->
+
+    </head>
+    <body>
+        <a href="/">&larr; home</a>
+<h1>Autotools Quickstart</h1>
+<span class="post_date">24 Mar 2024 - mat</span>
+
+<p>On my last post I talked about writing a test generator utilising autotools suite for its build system and packaging.
+Since then, I’ve been writing some software using autotools.
+But, everytime I need to reread the reference book or take a peek at my last project before I can start writing.
+So, I figure that writing a quickstart of using autotools will be helpful for future me!</p>
+
+<!--more-->
+
+<h1 id="requirements">Requirements</h1>
+
+<p>I’ll assume that we’re using a linux distribution on our machine (as I’m not sure whether the autotools suite support other os than linux).
+Autotools suite (and c compiler) should be already included in your linux distro.
+We’re using <code class="language-plaintext highlighter-rouge">Autoconf 2.71</code> and <code class="language-plaintext highlighter-rouge">Automake 1.16.1</code> in this post.
+While older or newer version might also works, you should keep this in mind suppose there’s a differences.
+You can check autotools version using these commands.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>autoconf <span class="nt">--version</span>
+<span class="nv">$ </span>automake <span class="nt">--version</span>
+</code></pre></div></div>
+
+<p>Supposed for some reasons it’s not installed on your system, you can head to gnu.org website to download both <a href="https://www.gnu.org/software/autoconf/">autoconf</a> and <a href="https://www.gnu.org/software/automake/">automake</a>.</p>
+
+<h1 id="initialising-the-project">Initialising The Project</h1>
+
+<p>Let’s start by creating the project structure</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># quickstart is our project name</span>
+<span class="nv">$ </span><span class="nb">mkdir </span>quickstart
+<span class="nv">$ </span><span class="nb">cd </span>quickstart
+<span class="nv">$ </span><span class="nb">mkdir </span>src
+<span class="nv">$ </span><span class="nb">touch </span>src/main.c
+</code></pre></div></div>
+
+<p>The code will resides in <code class="language-plaintext highlighter-rouge">src</code> directory while autotools related will be placed in the root project directory.
+We can of course costumize this and this is not a hard requirement.
+But, let’s start with the default configuration for now.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// src/main.c</span>
+
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">printf</span><span class="p">(</span><span class="s">"hello world</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h1 id="autotools-bootstrap">Autotools bootstrap</h1>
+
+<p>In autotools projects, there’s a filed called <code class="language-plaintext highlighter-rouge">configure.ac</code>.
+This file is the main configuration of the project.
+The project dependencies, tools, project information, etc are configured through this file.</p>
+
+<p>Fortunately, autotools comes with tools to help us with that.
+Go to the project root directory and execute this.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>autoscan
+</code></pre></div></div>
+
+<p>Notice that you now have 2 new files in your projects, <code class="language-plaintext highlighter-rouge">autoscan.log</code> and <code class="language-plaintext highlighter-rouge">configure.scan</code>.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
+├── autoscan.log
+├── configure.scan
+└── src
+    └── main.c
+</code></pre></div></div>
+
+<p>Let’s take a look at the <code class="language-plaintext highlighter-rouge">configure.scan</code> file.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// configure.scan
+<span class="c">#                                               -*- Autoconf -*-</span>
+<span class="c"># Process this file with autoconf to produce a configure script.</span>
+
+AC_PREREQ<span class="o">([</span>2.71]<span class="o">)</span>
+AC_INIT<span class="o">([</span>FULL-PACKAGE-NAME], <span class="o">[</span>VERSION], <span class="o">[</span>BUG-REPORT-ADDRESS]<span class="o">)</span>
+AC_CONFIG_SRCDIR<span class="o">([</span>src/main.c]<span class="o">)</span>
+AC_CONFIG_HEADERS<span class="o">([</span>config.h]<span class="o">)</span>
+
+<span class="c"># Checks for programs.</span>
+AC_PROG_CC
+
+<span class="c"># Checks for libraries.</span>
+
+<span class="c"># Checks for header files.</span>
+
+<span class="c"># Checks for typedefs, structures, and compiler characteristics.</span>
+
+<span class="c"># Checks for library functions.</span>
+
+AC_OUTPUT
+</code></pre></div></div>
+
+<p>The content of this file is auto generated based on the project structure it was run on.
+To use it, let’s modify its content a bit and rename the file.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>...
+AC_INIT([quickstart], [1.0.0], [report@email.com])
+...
+</code></pre></div></div>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">mv </span>configure.scan configure.ac
+</code></pre></div></div>
+
+<h1 id="define-automake-files">Define Automake files</h1>
+
+<p>Let’s continue to automake files.
+Those files will let us define how the project should be built.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// Makefile.am
+SUBDIRS <span class="o">=</span> src
+</code></pre></div></div>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// src/Makefile.am
+bin_PROGRAMS <span class="o">=</span> quickstart
+quickstart_SOURCES <span class="o">=</span> main.c
+</code></pre></div></div>
+
+<p>Here we define 2 automake files.
+The one in the root project defines the project subdirectory to be discovered by autoconf later.
+While the one in the <code class="language-plaintext highlighter-rouge">src</code> directory defines the program names and its sources.
+Our project structures will now look like this.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>.
+├── autoscan.log
+├── configure.ac
+├── Makefile.am
+└── src
+    ├── main.c
+    └── Makefile.am
+</code></pre></div></div>
+
+<p>Let’s adjust our <code class="language-plaintext highlighter-rouge">configure.ac</code> file so the automake files will be processed by autotools later.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// configure.ac
+...
+AC_CONFIG_HEADERS([config.h])
+AM_INIT_AUTOMAKE([foreign])
+...
+AC_CONFIG_FILES([Makefile
+                 src/Makefile])
+AC_OUTPUT
+</code></pre></div></div>
+
+<p>We’re initialising automake using <code class="language-plaintext highlighter-rouge">foreign</code> parameter.
+This means that this project isn’t following conventional automake structure and we can skip adding required files (<code class="language-plaintext highlighter-rouge">AUTHORS</code>, <code class="language-plaintext highlighter-rouge">NEWS</code>, <code class="language-plaintext highlighter-rouge">ChangeLog</code>, and <code class="language-plaintext highlighter-rouge">README</code>).
+In a real project, we should add those files for user informations.
+For now, we’re ommiting those for abbreviation.</p>
+
+<p>Notices that we’re listing config files based on the automake files that we created earlier.
+Supposed later we want to add more subdirectory to the project, we need to also add it to the config file listing.</p>
+
+<p>Last but not the least, we need to add some adjustment to our source codes.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// src/main.c</span>
+<span class="cp">#include</span> <span class="cpf">"config.h"</span><span class="cp">
+</span>
+<span class="cp">#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="cp">
+</span><span class="p">...</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">config.h</code> is a generated header file that contains information regarding compiler information, library availability, etc.
+Whlie it’s useless right now, it’s always a good practice to add this to the source code anyway.</p>
+
+<h1 id="executing-autotools">Executing Autotools</h1>
+
+<p>Now that everything’s are ready, we can start executing the autotools.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>autoreconf <span class="nt">-i</span>
+</code></pre></div></div>
+
+<p>Command above will execute required commands to process the project, so we don’t need to manually execute them one by one.
+The <code class="language-plaintext highlighter-rouge">-i</code> parameter will automatically create required missing files.</p>
+
+<p>We can then compile the project.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./configure
+<span class="nv">$ </span>make
+</code></pre></div></div>
+
+<p>The compiled program can then be executed.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./src/quickstart
+<span class="c"># hello world</span>
+</code></pre></div></div>
+
+<p>You can install it to your path.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>make <span class="nb">install</span> <span class="c"># might required root user</span>
+</code></pre></div></div>
+
+<p>Or compile it into a distributed package.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>make dist
+<span class="c"># quickstart-1.0.0.tar.gz</span>
+</code></pre></div></div>
+
+<h1 id="adding-dependencies">Adding dependencies</h1>
+
+<p>Usually while working on a big project, often times we need to use libraries to support the main program.
+Let’s see how do we add a library to our project.</p>
+
+<p>Let’s add <a href="https://github.com/alvinmatias69/libvslogger">libvslogger</a> (leveled logger library) to our project.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// configure.ac
+...
+<span class="c"># Checks for libraries.</span>
+AC_SEARCH_LIBS<span class="o">([</span>vslogger_init], <span class="o">[</span>vslogger]<span class="o">)</span>
+
+<span class="c"># Checks for header files.</span>
+AC_CHECK_HEADERS<span class="o">([</span>libvslogger.h]<span class="o">)</span>
+...
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">AC_CHECK_HEADERS</code> will check whether the given header is available in the current machine.
+The <code class="language-plaintext highlighter-rouge">AC_SEARCH_LIBS</code> will check and link the given library if available in the current machine.</p>
+
+<p>Now we need to adjust our code to utilise the library.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// src/main.c</span>
+<span class="cp">#include</span> <span class="cpf">"config.h"</span><span class="cp">
+</span>
+<span class="cp">#include</span> <span class="cpf">&lt;libvslogger.h&gt;</span><span class="cp">
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">struct</span> <span class="n">vslogger_config</span> <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">level</span> <span class="o">=</span> <span class="n">VSLOGGER_INFO</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">destination</span> <span class="o">=</span> <span class="n">stdout</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">enable_date</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">enable_prefix</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="n">vslogger_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">config</span><span class="p">);</span>
+    <span class="n">vslogger_info</span><span class="p">(</span><span class="s">"hello info"</span><span class="p">);</span>
+    <span class="n">vslogger_clear</span><span class="p">();</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Because we modify the <code class="language-plaintext highlighter-rouge">configure.ac</code> file, we need to reconfigure the project first.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>autoreconf <span class="nt">-i</span>
+</code></pre></div></div>
+
+<p>Then, compile the project like we did before.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./configure
+<span class="nv">$ </span>make
+<span class="nv">$ </span>./src/quickstart
+<span class="c"># [INFO][2024-03-24 13:32:55] hello info</span>
+</code></pre></div></div>
+
+<blockquote>
+  <p>Note: If you encountered library not found error while executing the program, you might need to refresh your dynamic library link</p>
+  <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ ldconfig # might need root access
+</code></pre></div>  </div>
+  <p>or add your library path to <code class="language-plaintext highlighter-rouge">LD_LIBRARY_PATH</code> directly, e.g.</p>
+  <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>$ LD_LIBRARY_PATH=/usr/local/lib ./src/quickstart
+</code></pre></div>  </div>
+</blockquote>
+
+<h2 id="optional-dependency">Optional Dependency</h2>
+
+<p>We can’t control the user machine, how it’s behave or what libraries does it has.
+In our case, there’s a possibility that our user doesn’t have the library that we require.
+We can then just simply require them to install it or provides an alternative supposed the library is missing.
+Let’s take a look at the latter approach.</p>
+
+<p>Supposed our use doesn’t have the <code class="language-plaintext highlighter-rouge">libvslogger</code> library, instead of giving error we will instead use a simple <code class="language-plaintext highlighter-rouge">printf</code>.
+To do this, first we need to adjust our <code class="language-plaintext highlighter-rouge">configure.ac</code> file.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code>// configure.ac
+...
+AC_SEARCH_LIBS<span class="o">([</span>vslogger_init], <span class="o">[</span>vslogger], <span class="o">[</span>AC_DEFINE<span class="o">([</span>HAVE_VSLOGGER], <span class="o">[</span>1], <span class="o">[</span>Define <span class="k">if </span>vslogger exist]<span class="o">)])</span>
+</code></pre></div></div>
+
+<p>The additional parameter will set <code class="language-plaintext highlighter-rouge">HAVE_VSLOGGER</code> variable supposed the library is available.
+This variable will be defined in the <code class="language-plaintext highlighter-rouge">config.h</code> and can be used in our code.
+Notice that this is the same file as the one that I mentioned earlier to be included in our source code.</p>
+
+<p>Ideally, we should also check the header for the same and set the variable based on the availability of both the library and the header.
+The implementation of that is left as an exercise for the reader.</p>
+
+<p>Then, we can use this variable in our code using some conditional macros.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// src/main.c</span>
+<span class="cp">#include</span> <span class="cpf">"config.h"</span><span class="cp">
+</span>
+<span class="cp">#ifdef HAVE_VSLOGGER
+#include</span> <span class="cpf">&lt;libvslogger.h&gt;</span><span class="cp">
+#else
+#include</span> <span class="cpf">&lt;stdio.h&gt;</span><span class="c1"> </span><span class="cp">
+#endif
+</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> <span class="p">{</span>
+<span class="cp">#ifdef HAVE_VSLOGGER
+</span>    <span class="k">struct</span> <span class="n">vslogger_config</span> <span class="n">config</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="p">.</span><span class="n">level</span> <span class="o">=</span> <span class="n">VSLOGGER_INFO</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">destination</span> <span class="o">=</span> <span class="n">stdout</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">enable_date</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+        <span class="p">.</span><span class="n">enable_prefix</span> <span class="o">=</span> <span class="nb">true</span><span class="p">,</span>
+    <span class="p">};</span>
+
+    <span class="n">vslogger_init</span><span class="p">(</span><span class="o">&amp;</span><span class="n">config</span><span class="p">);</span>
+    <span class="n">vslogger_info</span><span class="p">(</span><span class="s">"hello info"</span><span class="p">);</span>
+    <span class="n">vslogger_clear</span><span class="p">();</span>
+<span class="cp">#else
+</span>    <span class="n">printf</span><span class="p">(</span><span class="s">"hello standard</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+<span class="cp">#endif
+</span>
+    <span class="k">return</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h1 id="afterword">Afterword</h1>
+
+<p>Thank you for reading! The full project is available in my github <a href="https://github.com/alvinmatias69/autotools-quickstart">repository</a>.
+Again, I’ll emphasize that this post is not mean as a complete or exhaustive guide for autotools.
+Rather, it’s a simple quickstart and usecase if you want to implement autotools in your project.</p>
+
+<p>If you want to learn more about autotools, the gnu <a href="https://www.gnu.org/software/automake/faq/autotools-faq.html">website</a> has an extensive documentation and tutorial on that topic.
+Also, check out <a href="https://www.goodreads.com/book/show/41866149-autotools-2nd-edition"><code class="language-plaintext highlighter-rouge">Autotools, 2nd Edition: A Practitioner's Guide to GNU Autoconf, Automake, and Libtool</code></a> by John Calcote.
+I’m not affiliated or sponsored to promote the book, the book just very good at explaining autotools and I totally recommend you to read it if you want to delve deeper.</p>
+
+<p>Again, Thank you for reading this post! Let me know if there’s any mistake or anything that I can improve.
+See you in the next post!</p>
+
+
+<a href="/">&larr; home</a>
+
+    </body>
+</html>
