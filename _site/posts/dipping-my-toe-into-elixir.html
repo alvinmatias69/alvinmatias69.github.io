@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Dipping My Toe into Elixir</title>
+        <link rel="stylesheet" href="/assets/css/styles.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+        <link rel="manifest" href="/assets/images/site.webmanifest">
+        <link rel="mask-icon" href="/assets/images/safari-pinned-tab.svg" color="#5bbad5">
+        <link rel="shortcut icon" href="/assets/images/favicon.ico">
+        <meta name="msapplication-TileColor" content="#da532c">
+        <meta name="msapplication-config" content="/assets/images/browserconfig.xml">
+        <meta name="theme-color" content="#ffffff">
+        <link type="application/atom+xml" rel="alternate" href="/feed.xml" />
+        <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Dipping My Toe into Elixir</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="Dipping My Toe into Elixir" />
+<meta name="author" content="mat" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Elixir is a functional programming language that promise both scalability and great fault-tolerance. It also provides great tools to support development. But how much does elixir live up to their promise?" />
+<meta property="og:description" content="Elixir is a functional programming language that promise both scalability and great fault-tolerance. It also provides great tools to support development. But how much does elixir live up to their promise?" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-01-22T00:00:00+07:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Dipping My Toe into Elixir" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"mat"},"dateModified":"2025-01-22T00:00:00+07:00","datePublished":"2025-01-22T00:00:00+07:00","description":"Elixir is a functional programming language that promise both scalability and great fault-tolerance. It also provides great tools to support development. But how much does elixir live up to their promise?","headline":"Dipping My Toe into Elixir","mainEntityOfPage":{"@type":"WebPage","@id":"/posts/dipping-my-toe-into-elixir"},"url":"/posts/dipping-my-toe-into-elixir"}</script>
+<!-- End Jekyll SEO tag -->
+
+    </head>
+    <body>
+        <a href="/">&larr; home</a>
+<h1>Dipping My Toe into Elixir</h1>
+<span class="post_date">22 Jan 2025 - mat</span>
+
+<p>Elixir is a functional programming language that promise both scalability and great fault-tolerance.
+It also provides great tools to support development.
+But how much does elixir live up to their promise?</p>
+
+<!--more-->
+
+<p>In this post, we will create a theoretical chatbot using elixir.
+The chatbot will read user messages and will be triggered if the message contain url with tracking query in it.
+Then, the cleaned up url will be sent accordingly.</p>
+
+<blockquote>
+  <p>The reason the project is a theoretical chat bot is to reduce complexity and focus on the basic implementation.
+Most chat services require bot to be verified before it can read user messages, which also complicates things.
+For this project I hack together a simple broadcast websocket server.
+You can take a look at the server implementation <a href="https://github.com/alvinmatias69/anti_tracking_ws">here</a>.</p>
+</blockquote>
+
+<p>While I’m not going to write into too much detail, I’ll outline some important aspects that I’ve encountered while writing this project.
+Also for context, I’m not entirely unfamiliar with elixir as I’ve used it before at my job.
+But, it’s the first time I’ve written a complete elixir project from scratch.
+So, please takes this post with a grain of salt.</p>
+
+<p>You can check the completed project on my <a href="https://github.com/alvinmatias69/anti_tracking/">github</a>.</p>
+
+<h1 id="preparation">Preparation</h1>
+
+<p>There are two ways to install elixir on your system. 
+Either you install elixir through your package manager (e.g. apt, dnf, etc) or use language version manager, in this case asdf.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># clone asdf core</span>
+<span class="nv">$ </span>git clone https://github.com/asdf-vm/asdf.git ~/.asdf
+
+<span class="c"># add asdf to shell</span>
+<span class="nv">$ </span><span class="nb">echo</span> <span class="s1">'. "$HOME/.asdf/asdf.sh"'</span> <span class="o">&gt;&gt;</span> ~/.bashrc
+<span class="c"># or zsh</span>
+<span class="nv">$ </span><span class="nb">echo</span> <span class="s1">'. "$HOME/.asdf/asdf.sh"'</span> <span class="o">&gt;&gt;</span> ~/.zshrc
+</code></pre></div></div>
+
+<p>Because elixir is built on top of erlang, we also need to install erlang. Fortunately asdf also support erlang.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># install erlang</span>
+<span class="nv">$ </span>asdf plugin add erlang https://github.com/asdf-vm/asdf-erlang.git
+<span class="nv">$ </span>asdf <span class="nb">install </span>erlang latest
+
+<span class="c"># install elixir</span>
+<span class="nv">$ </span>asdf plugin-add elixir https://github.com/asdf-vm/asdf-elixir.git
+<span class="nv">$ </span>asdf <span class="nb">install </span>elixir latest
+</code></pre></div></div>
+
+<p>Check the elixir version to make sure it’s installed correctly.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>elixir <span class="nt">--version</span>
+</code></pre></div></div>
+
+<p>Take a look at the official documentation for further information.</p>
+<ul>
+  <li><a href="https://github.com/asdf-vm/asdf">asdf</a></li>
+  <li><a href="https://github.com/asdf-vm/asdf-erlang">asdf-erlang</a></li>
+  <li><a href="https://github.com/asdf-vm/asdf-elixir">asdf-elixir</a></li>
+</ul>
+
+<h2 id="code-editor">Code Editor</h2>
+
+<p>Personally, I use emacs. Doom emacs specifically.
+It already comes with support for elixir, with a few configs and tweaks we are ready to go.</p>
+
+<div class="language-lisp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">;; uncomment this on your .doom.d/init.el config file</span>
+<span class="p">(</span><span class="nv">elixir</span> <span class="nv">+lsp</span> <span class="nv">+tree-sitter</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Refer to the elixir module doom emacs <a href="https://github.com/doomemacs/doomemacs/tree/master/modules/lang/elixir">documentation</a> for further read.</p>
+
+<h1 id="project-structure">Project Structure</h1>
+
+<p>The project is an elixir umbrella project consist of 3 applications.</p>
+<ul>
+  <li><code class="language-plaintext highlighter-rouge">Storages</code></li>
+  <li><code class="language-plaintext highlighter-rouge">Web</code></li>
+  <li><code class="language-plaintext highlighter-rouge">Bot</code></li>
+</ul>
+
+<p>First, let’s initiate the project.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>mix new anti_tracking <span class="nt">--umbrella</span>
+</code></pre></div></div>
+
+<p>Mix is a build tool to help manage elixir project. 
+It’s installed automatically when we install elixir on our machine.</p>
+
+<p>A directory named <code class="language-plaintext highlighter-rouge">anti_tracking</code> will be created.
+Inside, we have a Mix project named <code class="language-plaintext highlighter-rouge">AntiTracking</code>.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">--umbrella</code> parameter indicates that the generated project will be an umbrella project.
+Umbrella project is a term used in elixir for a monorepo project.
+Each applications in the umbrella project will share configurations and dependencies.
+Check the mix <a href="https://hexdocs.pm/mix/1.12/Mix.html">documentation</a> for further details.</p>
+
+<h2 id="storages">Storages</h2>
+
+<p>Storages application is responsible for handling data.
+Similarly, we’re going to use <code class="language-plaintext highlighter-rouge">Mix</code> to initiate the application.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cd </span>anti_tracking/apps
+<span class="c"># create the application</span>
+<span class="nv">$ </span>mix new storages <span class="nt">--sup</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">--sup</code> parameter will create a supervised application.
+You can refer to the official <a href="https://hexdocs.pm/elixir/1.12/Supervisor.html">documentation</a> for details.
+The short explanation is that the project will be run in persistent mode and restarted if the child process crashed.</p>
+
+<p>Back to the storages, let’s take a quick look at the application.
+The main purpose of this application is to serve as source of truth for the whole project.
+The data itself are web domains and its list of query parameters that known to be a tracker.
+Those data will be stored in both database (postgresQL) and simple in-memory cache.
+The application also comes with an interface to query and modify the data.</p>
+
+<p><img src="/assets/images/elixir-quickstart/storages_uml.png" alt="Storages UML" width="100%" /></p>
+
+<p>The cache is a simple genserver with map as the state.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Storages</span><span class="o">.</span><span class="no">Cache</span> <span class="k">do</span>
+  <span class="kn">use</span> <span class="no">GenServer</span>
+  <span class="o">...</span>
+
+  <span class="nv">@impl</span> <span class="no">true</span>
+  <span class="k">def</span> <span class="n">init</span><span class="p">(</span><span class="ss">:ok</span><span class="p">)</span> <span class="k">do</span>
+    <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="p">%{}}</span>
+  <span class="k">end</span>
+
+  <span class="nv">@impl</span> <span class="no">true</span>
+  <span class="k">def</span> <span class="n">handle_call</span><span class="p">({</span><span class="ss">:lookup</span><span class="p">,</span> <span class="n">site_name</span><span class="p">},</span> <span class="n">_from</span><span class="p">,</span> <span class="n">cache</span><span class="p">)</span> <span class="k">do</span>
+    <span class="k">case</span> <span class="no">Map</span><span class="o">.</span><span class="n">fetch</span><span class="p">(</span><span class="n">cache</span><span class="p">,</span> <span class="n">site_name</span><span class="p">)</span> <span class="k">do</span>
+      <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">parameters</span><span class="p">}</span> <span class="o">-&gt;</span> <span class="p">{</span><span class="ss">:reply</span><span class="p">,</span> <span class="no">MapSet</span><span class="o">.</span><span class="n">to_list</span><span class="p">(</span><span class="n">parameters</span><span class="p">),</span> <span class="n">cache</span><span class="p">}</span>
+      <span class="n">_</span> <span class="o">-&gt;</span> <span class="p">{</span><span class="ss">:reply</span><span class="p">,</span> <span class="p">[],</span> <span class="n">cache</span><span class="p">}</span>
+    <span class="k">end</span>
+  <span class="k">end</span>
+  
+  <span class="o">...</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>While implementing the cache using genserver might create a bottleneck, the traffic and operation in this module is quite lightweight.
+In case that this approach is not performed enough, we can substitute this module with a proper cache (e.g. redis) to avoid bottleneck.</p>
+
+<p>The database is an interface to postgresql database through <a href="https://github.com/elixir-ecto/ecto">Ecto</a> library.
+Ecto is an ORM library for elixir that comes with handy tools (even migration included, so cool!) and extensive documentation.
+Adding the dependencies is quite straightforward.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Mix.exs</span>
+<span class="k">defp</span> <span class="n">deps</span> <span class="k">do</span>
+  <span class="p">[</span>
+    <span class="p">{</span><span class="ss">:ecto_sql</span><span class="p">,</span> <span class="s2">"~&gt; 3.0"</span><span class="p">},</span>
+    <span class="p">{</span><span class="ss">:postgrex</span><span class="p">,</span> <span class="s2">"&gt;= 0.0.0"</span><span class="p">}</span>
+  <span class="p">]</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>While I’m not really a fans of ORM, using Ecto is very simple and easy to understand.
+You can check their getting started <a href="https://hexdocs.pm/ecto/getting-started.html">documentation</a> yourself.</p>
+
+<p>According to Ecto convention, each table is defined in their own module.
+Also following that, we will put related functions (e.g. fetching ane updating data) on each table module accordingly.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Storages</span><span class="o">.</span><span class="no">Site</span> <span class="k">do</span>
+  <span class="kn">use</span> <span class="no">Ecto</span><span class="o">.</span><span class="no">Schema</span>
+  <span class="kn">require</span> <span class="no">Ecto</span><span class="o">.</span><span class="no">Query</span>
+  <span class="kn">import</span> <span class="no">Ecto</span><span class="o">.</span><span class="no">Changeset</span>
+  <span class="kn">import</span> <span class="no">Ecto</span><span class="o">.</span><span class="no">Query</span>
+
+  <span class="n">schema</span> <span class="s2">"sites"</span> <span class="k">do</span>
+    <span class="n">field</span><span class="p">(</span><span class="ss">:name</span><span class="p">,</span> <span class="ss">:string</span><span class="p">)</span>
+    <span class="n">many_to_many</span><span class="p">(</span><span class="ss">:parameters</span><span class="p">,</span> <span class="no">Storages</span><span class="o">.</span><span class="no">Parameter</span><span class="p">,</span> <span class="ss">join_through:</span> <span class="s2">"site_parameters"</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="nv">@spec</span> <span class="n">get_or_insert</span><span class="p">(</span><span class="no">String</span><span class="o">.</span><span class="n">t</span><span class="p">())</span> <span class="p">::</span> <span class="p">{</span><span class="ss">:error</span><span class="p">,</span> <span class="p">%</span><span class="no">Ecto</span><span class="o">.</span><span class="no">Changeset</span><span class="p">{}}</span> <span class="o">|</span> <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">integer</span><span class="p">()}</span>
+  <span class="k">def</span> <span class="n">get_or_insert</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">do</span>
+  <span class="o">...</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Last but not least, the main <code class="language-plaintext highlighter-rouge">Storages</code> module.
+This module is the interface that will serves logic to handle the data.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Storages</span> <span class="k">do</span>
+  <span class="kn">require</span> <span class="no">Logger</span>
+
+  <span class="nv">@spec</span> <span class="n">insert</span><span class="p">(</span><span class="no">String</span><span class="o">.</span><span class="n">t</span><span class="p">(),</span> <span class="p">[</span><span class="no">String</span><span class="o">.</span><span class="n">t</span><span class="p">()],</span> <span class="p">{</span><span class="ss">:update_cache</span><span class="p">,</span> <span class="no">true</span><span class="p">})</span> <span class="p">::</span>
+          <span class="p">{</span><span class="ss">:server_error</span><span class="p">,</span> <span class="no">String</span><span class="o">.</span><span class="n">t</span><span class="p">()}</span> <span class="o">|</span> <span class="p">{</span><span class="ss">:error</span><span class="p">,</span> <span class="no">String</span><span class="o">.</span><span class="n">t</span><span class="p">()}</span> <span class="o">|</span> <span class="ss">:ok</span>
+  <span class="k">def</span> <span class="n">insert</span><span class="p">(</span><span class="n">site_name</span><span class="p">,</span> <span class="n">parameter_names</span><span class="p">,</span> <span class="p">{</span><span class="ss">:update_cache</span><span class="p">,</span> <span class="no">true</span><span class="p">})</span> <span class="k">do</span>
+    <span class="k">case</span> <span class="n">insert</span><span class="p">(</span><span class="n">site_name</span><span class="p">,</span> <span class="n">parameter_names</span><span class="p">)</span> <span class="k">do</span>
+      <span class="ss">:ok</span> <span class="o">-&gt;</span>
+        <span class="no">Storages</span><span class="o">.</span><span class="no">Cache</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">site_name</span><span class="p">,</span> <span class="n">parameter_names</span><span class="p">)</span>
+        <span class="ss">:ok</span>
+  <span class="o">...</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Interaction to the <code class="language-plaintext highlighter-rouge">Storages</code> application, be it from another application or interactive shell (more on this later) will be started from this module.</p>
+
+<p>Because we want the application to start (and supervise) both services during startup, they needed to be added to the application children list.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Storages</span><span class="o">.</span><span class="no">Application</span> <span class="k">do</span>
+  <span class="nv">@moduledoc</span> <span class="no">false</span>
+
+  <span class="kn">use</span> <span class="no">Application</span>
+
+  <span class="nv">@impl</span> <span class="no">true</span>
+  <span class="k">def</span> <span class="n">start</span><span class="p">(</span><span class="n">_type</span><span class="p">,</span> <span class="n">_args</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="p">[</span>
+      <span class="no">Storages</span><span class="o">.</span><span class="no">Repo</span><span class="p">,</span>
+      <span class="p">{</span><span class="no">Storages</span><span class="o">.</span><span class="no">Cache</span><span class="p">,</span> <span class="ss">name:</span> <span class="no">Storages</span><span class="o">.</span><span class="no">Cache</span><span class="p">}</span>
+    <span class="p">]</span>
+
+    <span class="n">opts</span> <span class="o">=</span> <span class="p">[</span><span class="ss">strategy:</span> <span class="ss">:one_for_one</span><span class="p">,</span> <span class="ss">name:</span> <span class="no">Storages</span><span class="o">.</span><span class="no">Supervisor</span><span class="p">]</span>
+    <span class="no">Supervisor</span><span class="o">.</span><span class="n">start_link</span><span class="p">(</span><span class="n">children</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>All done for the <code class="language-plaintext highlighter-rouge">Storages</code> application.
+Now, let’s test this using elixir interactive shell (<code class="language-plaintext highlighter-rouge">iex</code>).</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>iex <span class="nt">-S</span> mix
+
+iex<span class="o">(</span>1<span class="o">)&gt;</span> Storages.get<span class="o">(</span><span class="s2">"google.com"</span><span class="o">)</span>
+<span class="o">[</span><span class="s2">"utm_params"</span>, <span class="s2">"utm_sources"</span>, <span class="s2">"utm_campaign"</span><span class="o">]</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">iex</code> command will execute elixir REPL in the current terminal.
+The <code class="language-plaintext highlighter-rouge">-S mix</code> argument will tell the <code class="language-plaintext highlighter-rouge">iex</code> to start the current mix project and attach the shell to the project.
+From the shell, we can execute modules and functions included in the project.
+Pretty useful for testing, even more the shell can reload code changes without needed to restart.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>iex<span class="o">(</span>1<span class="o">)&gt;</span> recompile<span class="o">()</span>
+</code></pre></div></div>
+
+<p>In my opinion, this is one of the coolest feature of elixir.
+This make iterating very simple.</p>
+
+<h2 id="web">Web</h2>
+
+<p>Web application will serve as an interface to modify the bot data.
+With a simple authentication, the ‘bot admin’ can easily modifying the data without needed to update the database (or cache) directly.
+Just like with the <code class="language-plaintext highlighter-rouge">Storages</code>, we’re going to create a new supervised application.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>mix new web <span class="nt">--sup</span>
+</code></pre></div></div>
+
+<p>The application itself is pretty simple, it will handle user input through web interface and pass that to our <code class="language-plaintext highlighter-rouge">Storages</code> app.
+For this application we’re utilizing three libraries:</p>
+<ul>
+  <li><a href="https://github.com/elixir-plug/plug">Plug</a>: building blocks for composing web using elixir functions.</li>
+  <li><a href="https://github.com/mtrudel/bandit">Bandit</a>: lightweight elixir http server.</li>
+  <li><a href="https://github.com/mtrudel/bandit">Poison</a>: json parser.</li>
+</ul>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Mix.exs</span>
+  <span class="k">defp</span> <span class="n">deps</span> <span class="k">do</span>
+    <span class="p">[</span>
+      <span class="p">{</span><span class="ss">:bandit</span><span class="p">,</span> <span class="s2">"~&gt; 1.0"</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:poison</span><span class="p">,</span> <span class="s2">"~&gt; 6.0"</span><span class="p">},</span>
+      <span class="p">{</span><span class="ss">:storages</span><span class="p">,</span> <span class="ss">in_umbrella:</span> <span class="no">true</span><span class="p">}</span>
+    <span class="p">]</span>
+  <span class="k">end</span>
+</code></pre></div></div>
+
+<p>Because the web will call storages application to fetch or modify data, it needs to be added in the dependency list.
+Notice that instead of version, we put <code class="language-plaintext highlighter-rouge">in_umbrella: true</code>.
+This will tell mix that this certain dependency is reside within the same project.</p>
+
+<p>The bandit dependency is already include plug in it.
+While bandit is responsible for the heavylifting of the webserver, plug will handle and ‘glue’ our application.
+Let’s talk a bit about plug.</p>
+
+<p>Plug, the heart of this application is so powerful yet so simple.
+So much that it deserved a writeup on its own.
+To put it simply, by utilizing Plug we can create a simple webserver and focus on the business logic (akin to Express of nodejs).</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Web</span> <span class="k">do</span>
+  <span class="kn">use</span> <span class="no">Plug</span><span class="o">.</span><span class="no">Router</span>
+
+  <span class="n">plug</span><span class="p">(</span><span class="ss">:match</span><span class="p">)</span>
+  <span class="n">plug</span><span class="p">(</span><span class="no">Plug</span><span class="o">.</span><span class="no">Logger</span><span class="p">)</span>
+  <span class="n">plug</span><span class="p">(</span><span class="ss">:dispatch</span><span class="p">)</span>
+
+  <span class="n">get</span> <span class="s2">"/ping"</span> <span class="k">do</span>
+    <span class="n">send_resp</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="s2">"pong"</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="n">forward</span><span class="p">(</span><span class="s2">"/tracker"</span><span class="p">,</span> <span class="ss">to:</span> <span class="no">Web</span><span class="o">.</span><span class="no">TrackerRouter</span><span class="p">)</span>
+
+  <span class="n">match</span> <span class="n">_</span> <span class="k">do</span>
+    <span class="n">send_resp</span><span class="p">(</span><span class="n">conn</span><span class="p">,</span> <span class="mi">404</span><span class="p">,</span> <span class="s2">"not found"</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>You might notice that the module doesn’t follow the elixir standard of function definition.
+It’s because Plug heavily utilizing macro to make defining path clearer.</p>
+
+<p>On the <code class="language-plaintext highlighter-rouge">Web.TrackerRouter</code> module, we handle user inputs.
+Including authenticating request, json serialize and deserializing, and function to <code class="language-plaintext highlighter-rouge">Storages</code> application invocation.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Web</span><span class="o">.</span><span class="no">TrackerRouter</span> <span class="k">do</span>
+  <span class="kn">require</span> <span class="no">Logger</span>
+
+  <span class="kn">use</span> <span class="no">Plug</span><span class="o">.</span><span class="no">Router</span>
+
+  <span class="n">plug</span><span class="p">(</span><span class="ss">:match</span><span class="p">)</span>
+
+  <span class="kn">import</span> <span class="no">Plug</span><span class="o">.</span><span class="no">BasicAuth</span>
+
+  <span class="n">plug</span><span class="p">(</span><span class="ss">:basic_auth</span><span class="p">,</span>
+    <span class="ss">username:</span> <span class="no">Application</span><span class="o">.</span><span class="n">compile_env</span><span class="p">(</span><span class="ss">:web</span><span class="p">,</span> <span class="ss">:username</span><span class="p">),</span>
+    <span class="ss">password:</span> <span class="no">Application</span><span class="o">.</span><span class="n">compile_env</span><span class="p">(</span><span class="ss">:web</span><span class="p">,</span> <span class="ss">:password</span><span class="p">)</span>
+  <span class="p">)</span>
+
+  <span class="n">plug</span><span class="p">(</span><span class="no">Plug</span><span class="o">.</span><span class="no">Parsers</span><span class="p">,</span> <span class="ss">parsers:</span> <span class="p">[</span><span class="ss">:json</span><span class="p">],</span> <span class="ss">json_decoder:</span> <span class="no">Poison</span><span class="p">)</span>
+
+  <span class="n">plug</span><span class="p">(</span><span class="ss">:dispatch</span><span class="p">)</span>
+
+  <span class="n">get</span> <span class="s2">"/:site_name"</span> <span class="k">do</span>
+    <span class="n">payload</span> <span class="o">=</span>
+      <span class="p">%{</span><span class="ss">parameters:</span> <span class="no">Storages</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">site_name</span><span class="p">)}</span>
+      <span class="o">|&gt;</span> <span class="no">Poison</span><span class="o">.</span><span class="n">encode!</span><span class="p">()</span>
+
+    <span class="n">conn</span>
+    <span class="o">|&gt;</span> <span class="n">send_json_response</span><span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="n">payload</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="o">...</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Last, we need to define our child application.
+But unlike last time, we’re going to add bandit as the child instead of our module directly.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Web</span><span class="o">.</span><span class="no">Application</span> <span class="k">do</span>
+  <span class="nv">@moduledoc</span> <span class="no">false</span>
+
+  <span class="kn">use</span> <span class="no">Application</span>
+
+  <span class="nv">@impl</span> <span class="no">true</span>
+  <span class="k">def</span> <span class="n">start</span><span class="p">(</span><span class="n">_type</span><span class="p">,</span> <span class="n">_args</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="p">[</span>
+      <span class="p">{</span><span class="no">Bandit</span><span class="p">,</span> <span class="ss">plug:</span> <span class="no">Web</span><span class="p">,</span> <span class="ss">scheme:</span> <span class="ss">:http</span><span class="p">,</span> <span class="ss">port:</span> <span class="no">Application</span><span class="o">.</span><span class="n">fetch_env!</span><span class="p">(</span><span class="ss">:web</span><span class="p">,</span> <span class="ss">:port</span><span class="p">)}</span>
+    <span class="p">]</span>
+
+    <span class="n">opts</span> <span class="o">=</span> <span class="p">[</span><span class="ss">strategy:</span> <span class="ss">:one_for_one</span><span class="p">,</span> <span class="ss">name:</span> <span class="no">Web</span><span class="o">.</span><span class="no">Supervisor</span><span class="p">]</span>
+    <span class="no">Supervisor</span><span class="o">.</span><span class="n">start_link</span><span class="p">(</span><span class="n">children</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>This is the advantage of using plug (and bandit in this case).
+Most of the time, we can simply implement plug as we need and all other heavylifting of the web will be handled by the library, neat!</p>
+
+<blockquote>
+  <p>You might notice that in the last 2 code snippet, we have code that seems to fetch environment variable.
+That isn’t quite accurate as it actually fetching configuration of the current environment.
+More on that later, but for now all you need to know that those code fetching the value from a configuration file.</p>
+</blockquote>
+
+<p>Let’s test this, shall we.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>iex <span class="nt">-S</span> mix
+
+<span class="o">[</span>info] Running Web with Bandit 1.6.1 at 0.0.0.0:8080 <span class="o">(</span>http<span class="o">)</span>
+Erlang/OTP 26 <span class="o">[</span>erts-14.2.3] <span class="o">[</span><span class="nb">source</span><span class="o">]</span> <span class="o">[</span>64-bit] <span class="o">[</span>smp:4:4] <span class="o">[</span>ds:4:4:10] <span class="o">[</span>async-threads:1] <span class="o">[</span>jit:ns
+</code></pre></div></div>
+
+<p>Because both applications reside in a same umbrella project, we don’t need to start each application individually.
+And we can test that the webserver is working by invoking a simple curl.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>curl localhost:8080/tracker/www.google.com <span class="se">\</span>
+   <span class="nt">-H</span> <span class="s2">"Authorization: Basic aGVsbG86d29ybGQ="</span>
+
+<span class="o">{</span><span class="s2">"parameters"</span>:[<span class="s2">"utm_params"</span>, <span class="s2">"utm_sources"</span>, <span class="s2">"utm_campaign"</span><span class="o">]}</span>%
+</code></pre></div></div>
+
+<h2 id="bot">Bot</h2>
+
+<p>The bot application is the core of the project.
+This application will connect to a webserver and handle all received messages.
+Supposed the message contains known url with tracking parameters, the bot will then send the url with all tracking parameters removed.</p>
+
+<p>We’re using <a href="https://github.com/Azolo/websockex">Websockex</a>, an elixir websocket client.
+The library is choosen due to their API that resembled elixir genserver.
+Thus, make the application more familiar and easy to work with.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Bot</span> <span class="k">do</span>
+  <span class="kn">use</span> <span class="no">WebSockex</span>
+  <span class="kn">require</span> <span class="no">Logger</span>
+
+  <span class="k">def</span> <span class="n">start_link</span><span class="p">(</span><span class="n">opts</span> <span class="p">\\</span> <span class="p">[])</span> <span class="k">do</span>
+    <span class="no">WebSockex</span><span class="o">.</span><span class="n">start_link</span><span class="p">(</span><span class="no">Keyword</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">opts</span><span class="p">,</span> <span class="ss">:url</span><span class="p">),</span> <span class="bp">__MODULE__</span><span class="p">,</span> <span class="ss">:state</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="nv">@spec</span> <span class="n">cast_message</span><span class="p">(</span><span class="no">String</span><span class="o">.</span><span class="n">t</span><span class="p">())</span> <span class="p">::</span> <span class="ss">:ok</span>
+  <span class="k">def</span> <span class="n">cast_message</span><span class="p">(</span><span class="n">message</span><span class="p">)</span> <span class="k">do</span>
+    <span class="no">Logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">"casting message: </span><span class="si">#{</span><span class="n">message</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="no">WebSockex</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="bp">__MODULE__</span><span class="p">,</span> <span class="n">message</span><span class="p">)</span>
+  <span class="k">end</span>
+
+  <span class="o">...</span>
+
+  <span class="k">def</span> <span class="n">handle_frame</span><span class="p">({</span><span class="ss">:text</span><span class="p">,</span> <span class="n">message</span><span class="p">},</span> <span class="n">state</span><span class="p">)</span> <span class="k">do</span>
+    <span class="no">Task</span><span class="o">.</span><span class="no">Supervisor</span><span class="o">.</span><span class="n">start_child</span><span class="p">(</span><span class="no">Bot</span><span class="o">.</span><span class="no">TaskSupervisor</span><span class="p">,</span> <span class="no">Bot</span><span class="o">.</span><span class="no">MessageHandler</span><span class="p">,</span> <span class="ss">:handle</span><span class="p">,</span> <span class="p">[</span><span class="n">message</span><span class="p">])</span>
+    <span class="p">{</span><span class="ss">:ok</span><span class="p">,</span> <span class="n">state</span><span class="p">}</span>
+  <span class="k">end</span>
+
+  <span class="o">...</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>The nature of a chat bot requires them to handle big stream of messages.
+Hence, we’re utilizing task to handle each message.
+<a href="https://hexdocs.pm/elixir/Task.html">Task</a> is a convenient way to spawn a process in elixir (similar to goroutine of golang).
+By using task supervisor, we can even retry the task in the event of error or failure.
+Because each message handled by different process, the main process won’t be blocked and the bot can handle multiple messages ‘concurrently’.</p>
+
+<p>Concurrently in a quote due to the nature of the websocket client library itself.
+While the message is processed concurrently, sending it back to the server can only be done using a single connection.
+Making the websocket connection being the bottleneck.
+And it might be a good thing, because most chat servers has a rate limit.
+Breaking that and our bot might be timed out or worse getting banned.
+To prevent that, we might also need to implement rate limiter for message sent.
+But, because we’re only implementing this for a theoretical chat server, current implementation is sufficient.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Bot</span><span class="o">.</span><span class="no">MessageHandler</span> <span class="k">do</span>
+  <span class="nv">@spec</span> <span class="n">handle</span><span class="p">(</span><span class="no">String</span><span class="o">.</span><span class="n">t</span><span class="p">())</span> <span class="p">::</span> <span class="no">nil</span> <span class="o">|</span> <span class="ss">:ok</span>
+  <span class="k">def</span> <span class="n">handle</span><span class="p">(</span><span class="n">message</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">message</span>
+    <span class="o">...</span>
+    <span class="o">|&gt;</span> <span class="no">Enum</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="o">&amp;</span><span class="n">cleanup_uri</span><span class="o">/</span><span class="mi">1</span><span class="p">)</span>
+    <span class="o">...</span>
+    <span class="o">|&gt;</span> <span class="n">send</span><span class="p">()</span>
+  <span class="k">end</span>
+
+  <span class="k">defp</span> <span class="n">cleanup_uri</span><span class="p">(</span><span class="n">uri</span><span class="p">)</span> <span class="k">do</span>
+    <span class="p">%</span><span class="no">URI</span><span class="p">{</span><span class="ss">host:</span> <span class="n">host</span><span class="p">,</span> <span class="ss">query:</span> <span class="n">query</span><span class="p">}</span> <span class="o">=</span> <span class="n">uri</span>
+    <span class="n">query</span> <span class="o">=</span> <span class="no">URI</span><span class="o">.</span><span class="n">decode_query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span>
+
+    <span class="n">cleaned_query</span> <span class="o">=</span>
+      <span class="no">Storages</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="p">{</span><span class="ss">:with_cache</span><span class="p">,</span> <span class="no">true</span><span class="p">})</span>
+      <span class="o">|&gt;</span> <span class="no">Enum</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="n">query</span><span class="p">,</span> <span class="k">fn</span> <span class="n">item</span><span class="p">,</span> <span class="n">acc</span> <span class="o">-&gt;</span>
+        <span class="no">Map</span><span class="o">.</span><span class="n">delete</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+      <span class="k">end</span><span class="p">)</span>
+    <span class="o">...</span>
+  <span class="k">end</span>
+  
+  <span class="o">...</span>
+  
+  <span class="k">defp</span> <span class="n">send</span><span class="p">(</span><span class="n">uris</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">uris</span>
+    <span class="o">|&gt;</span> <span class="no">Enum</span><span class="o">.</span><span class="n">reduce</span><span class="p">(</span><span class="s2">"Here's your cleaned up urls:"</span><span class="p">,</span> <span class="k">fn</span> <span class="n">item</span><span class="p">,</span> <span class="n">acc</span> <span class="o">-&gt;</span>
+      <span class="n">acc</span> <span class="o">&lt;&gt;</span> <span class="s2">"</span><span class="se">\n</span><span class="s2"> - "</span> <span class="o">&lt;&gt;</span> <span class="no">URI</span><span class="o">.</span><span class="n">to_string</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+    <span class="k">end</span><span class="p">)</span>
+    <span class="o">|&gt;</span> <span class="no">Bot</span><span class="o">.</span><span class="n">cast_message</span><span class="p">()</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>The handler implementation itself is quite straightforward.
+We parse the message, and if it contains a known url with tracking parameters we send it back with the cleaned up url.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">Bot</span><span class="o">.</span><span class="no">Application</span> <span class="k">do</span>
+  <span class="nv">@moduledoc</span> <span class="no">false</span>
+
+  <span class="kn">use</span> <span class="no">Application</span>
+
+  <span class="nv">@impl</span> <span class="no">true</span>
+  <span class="k">def</span> <span class="n">start</span><span class="p">(</span><span class="n">_type</span><span class="p">,</span> <span class="n">_args</span><span class="p">)</span> <span class="k">do</span>
+    <span class="n">children</span> <span class="o">=</span> <span class="p">[</span>
+      <span class="p">{</span><span class="no">Task</span><span class="o">.</span><span class="no">Supervisor</span><span class="p">,</span> <span class="ss">name:</span> <span class="no">Bot</span><span class="o">.</span><span class="no">TaskSupervisor</span><span class="p">},</span>
+      <span class="p">{</span><span class="no">Bot</span><span class="p">,</span> <span class="p">[</span><span class="ss">async:</span> <span class="no">true</span><span class="p">,</span> <span class="ss">name:</span> <span class="no">Bot</span><span class="p">,</span> <span class="ss">url:</span> <span class="no">Application</span><span class="o">.</span><span class="n">fetch_env!</span><span class="p">(</span><span class="ss">:bot</span><span class="p">,</span> <span class="ss">:url</span><span class="p">)]}</span>
+    <span class="p">]</span>
+
+    <span class="n">opts</span> <span class="o">=</span> <span class="p">[</span><span class="ss">strategy:</span> <span class="ss">:one_for_one</span><span class="p">,</span> <span class="ss">name:</span> <span class="no">Bot</span><span class="o">.</span><span class="no">Supervisor</span><span class="p">]</span>
+    <span class="no">Supervisor</span><span class="o">.</span><span class="n">start_link</span><span class="p">(</span><span class="n">children</span><span class="p">,</span> <span class="n">opts</span><span class="p">)</span>
+  <span class="k">end</span>
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>Same as before, we register our supervised module in our application module.
+Notice that we also register the task supervisor despite not having the module in the application.
+It’s due to the nature of the supervisor module, we can simply started it and give it a name.
+We can also add some options to handle error events, but let’s keep it simple for now.</p>
+
+<h1 id="get-it-running">Get It Running!</h1>
+
+<p>Everything is done, let’s try out our project.</p>
+
+<video autoplay="autoplay" loop="loop" width="80%" height="auto" controls="" playsinline="">
+    <source src="/assets/videos/elixir_quickstart/demo.mp4" type="video/mp4" />
+</video>
+
+<p>As we can see, our bot will react to message with known url and tracking parameter.
+It won’t reply to message without url or url without tracking parameter.</p>
+
+<p>Now, to the last and most important part of the project, deployment.</p>
+
+<h2 id="deployment">Deployment</h2>
+
+<p>We need to add some informations to our root <code class="language-plaintext highlighter-rouge">mix.exs</code> file before we can start the deployment.</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">defmodule</span> <span class="no">AntiTracking</span><span class="o">.</span><span class="no">MixProject</span> <span class="k">do</span>
+  <span class="kn">use</span> <span class="no">Mix</span><span class="o">.</span><span class="no">Project</span>
+
+  <span class="k">def</span> <span class="n">project</span> <span class="k">do</span>
+    <span class="p">[</span>
+      <span class="ss">apps_path:</span> <span class="s2">"apps"</span><span class="p">,</span>
+      <span class="ss">version:</span> <span class="s2">"0.1.0"</span><span class="p">,</span>
+      <span class="ss">start_permanent:</span> <span class="no">Mix</span><span class="o">.</span><span class="n">env</span><span class="p">()</span> <span class="o">==</span> <span class="ss">:prod</span><span class="p">,</span>
+      <span class="ss">deps:</span> <span class="n">deps</span><span class="p">(),</span>
+      <span class="ss">releases:</span> <span class="p">[</span>
+        <span class="ss">bot:</span> <span class="p">[</span>
+          <span class="ss">version:</span> <span class="s2">"0.0.1"</span><span class="p">,</span>
+          <span class="ss">include_executables_for:</span> <span class="p">[</span><span class="ss">:unix</span><span class="p">],</span>
+          <span class="ss">applications:</span> <span class="p">[</span>
+            <span class="ss">web:</span> <span class="ss">:permanent</span><span class="p">,</span> 
+            <span class="ss">storages:</span> <span class="ss">:permanent</span><span class="p">,</span> 
+            <span class="ss">bot:</span> <span class="ss">:permanent</span>
+          <span class="p">]</span>
+        <span class="p">]</span>
+      <span class="p">]</span>
+    <span class="p">]</span>
+  <span class="k">end</span>
+  <span class="o">...</span> 
+<span class="k">end</span>
+</code></pre></div></div>
+
+<p>We need to define the applications included in the release.
+If desired we can define multiple releases with different applications (e.g. release only web application, etc).</p>
+
+<p>You might notice that we set the <code class="language-plaintext highlighter-rouge">start_permanent</code> key with comparison to environment and atom <code class="language-plaintext highlighter-rouge">:prod</code>.
+This key will determine whether to crash the erlang vm when the application supervisor tree shutdown, we don’t want this to happen in development as the stacktraces are important to debugging.
+But, what is the environment being referred here?
+Let’s take a quick detour.</p>
+
+<h3 id="environment">Environment</h3>
+
+<p>By default, our mix project is run on <code class="language-plaintext highlighter-rouge">:dev</code> environment.
+We can set this by passing <code class="language-plaintext highlighter-rouge">MIX_ENV</code> variable.</p>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ MIX_ENV</span><span class="o">=</span>prod iex <span class="nt">-S</span> mix
+</code></pre></div></div>
+
+<p>Mix support three environments out of the box: <code class="language-plaintext highlighter-rouge">:dev</code>, <code class="language-plaintext highlighter-rouge">:test</code>, and <code class="language-plaintext highlighter-rouge">:prod</code>.
+Those environments should be self explanatory. 
+Other than setting various compiler config (debug artifacts, etc), environment also used to set project configuration.</p>
+
+<h4 id="configuration">Configuration</h4>
+
+<p>Configuration is a module that used to define project configuration.
+Typically, it reside in <code class="language-plaintext highlighter-rouge">config/config.exs</code> file.
+But it’s configurable through application <code class="language-plaintext highlighter-rouge">Mix.exs</code> file in <code class="language-plaintext highlighter-rouge">config_path</code> key (for umbrella project, this is defined on each application mix file).</p>
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="no">Config</span>
+
+<span class="n">config</span> <span class="ss">:storages</span><span class="p">,</span> <span class="ss">ecto_repos:</span> <span class="p">[</span><span class="no">Storages</span><span class="o">.</span><span class="no">Repo</span><span class="p">]</span>
+<span class="n">import_config</span> <span class="s2">"</span><span class="si">#{</span><span class="n">config_env</span><span class="p">()</span><span class="si">}</span><span class="s2">.exs"</span>
+</code></pre></div></div>
+
+<p>Other than config data for ecto, we can see that the config file will import another config file with current environment as the filename.
+This enable per environment configuration, pretty helpful for separating configuration for different scenario (e.g. development and testing).
+For production, it’s a good practice not to commit the configuration value.
+Instead, configuration values will be defined from environment variables.
+(In the real word though, usually the production config values are set using more sophisticated way like kubeseal. Which in turn will set the production machine environment variables).</p>
+
+<div class="language-elixir highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="no">Config</span>
+
+<span class="n">config</span> <span class="ss">:storages</span><span class="p">,</span> <span class="no">Storages</span><span class="o">.</span><span class="no">Repo</span><span class="p">,</span>
+  <span class="ss">database:</span> <span class="no">System</span><span class="o">.</span><span class="n">get_env</span><span class="p">(</span><span class="s2">"DB_NAME"</span><span class="p">),</span>
+  <span class="ss">username:</span> <span class="no">System</span><span class="o">.</span><span class="n">get_env</span><span class="p">(</span><span class="s2">"DB_USERNAME"</span><span class="p">),</span>
+  <span class="ss">password:</span> <span class="no">System</span><span class="o">.</span><span class="n">get_env</span><span class="p">(</span><span class="s2">"DB_PASSWORD"</span><span class="p">),</span>
+  <span class="ss">hostname:</span> <span class="no">System</span><span class="o">.</span><span class="n">get_env</span><span class="p">(</span><span class="s2">"DB_HOST"</span><span class="p">)</span>
+
+<span class="n">config</span> <span class="ss">:web</span><span class="p">,</span>
+  <span class="ss">port:</span> <span class="no">System</span><span class="o">.</span><span class="n">get_env</span><span class="p">(</span><span class="s2">"WEB_PORT"</span><span class="p">),</span>
+  <span class="ss">username:</span> <span class="no">System</span><span class="o">.</span><span class="n">get_env</span><span class="p">(</span><span class="s2">"WEB_USERNAME"</span><span class="p">),</span>
+  <span class="ss">password:</span> <span class="no">System</span><span class="o">.</span><span class="n">get_env</span><span class="p">(</span><span class="s2">"WEB_PASSWORD"</span><span class="p">)</span>
+
+<span class="n">config</span> <span class="ss">:bot</span><span class="p">,</span>
+  <span class="ss">url:</span> <span class="no">System</span><span class="o">.</span><span class="n">get_env</span><span class="p">(</span><span class="s2">"BOT_WS_URL"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>There’s a “gotcha” for this approach.
+In elixir, by default all configuration value is determine while compiling.
+Which mean, if we set configuration values while both compiling and running, the one used will be the one set while compiling.
+For configuration that set during runtime, we need to set it on <code class="language-plaintext highlighter-rouge">config/runtime.exs</code> instead.</p>
+
+<p>Now we have learn about environment and configuration.
+Let’s create our first production release for AntiTracking bot.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">export </span><span class="nv">DB_NAME</span><span class="o">=</span>antitracking_db
+...
+<span class="nv">$ MIX_ENV</span><span class="o">=</span>prod mix compile
+<span class="nv">$ MIX_ENV</span><span class="o">=</span>prod mix release
+</code></pre></div></div>
+
+<p>Remember, we need to set the environment variables before compiling.
+Otherwise, configuration values will be empty.</p>
+
+<p>The compiled binary will then available on the <code class="language-plaintext highlighter-rouge">_build/prod/rel/bot/bin/</code> directory with the release name as the binary name (in this case <code class="language-plaintext highlighter-rouge">bot</code>).
+The binary itself contains set of commands.</p>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./_build/prod/rel/bot/bin/bot 
+Usage: bot COMMAND <span class="o">[</span>ARGS]
+
+The known commands are:
+
+    start          Starts the system
+    start_iex      Starts the system with IEx attached
+    daemon         Starts the system as a daemon
+    daemon_iex     Starts the system as a daemon with IEx attached
+    <span class="nb">eval</span> <span class="s2">"EXPR"</span>    Executes the given expression on a new, non-booted system
+    rpc <span class="s2">"EXPR"</span>     Executes the given expression remotely on the running system
+    remote         Connects to the running system via a remote shell
+    restart        Restarts the running system via a remote <span class="nb">command
+    </span>stop           Stops the running system via a remote <span class="nb">command
+    </span>pid            Prints the operating system PID of the running system via a remote <span class="nb">command
+    </span>version        Prints the release name and version to be booted
+</code></pre></div></div>
+
+<p>We can even start the project as a daemon directly from the binary, cool!</p>
+
+<h1 id="lesson-learned-and-future-works">Lesson Learned and Future Works</h1>
+
+<p>Coming from OO / procedural programming paradigm, learning elixir is quite challenging.
+I need to “rebuild” my thinking process just to solve a simple problem.</p>
+
+<p>The book “<a href="https://www.manning.com/books/elixir-in-action">Elixir in Action</a>” by Sasa Juric is pretty good on introducing the language, environment, and guideline to writing elixir.
+Solving some leetcode / hackerrank problem also helps a lot to give “sense” of the language.
+The official documentation on <a href="https://hexdocs.pm/elixir/introduction.html">hexdocs</a> provides great step-by-step tutorial on creating an elixir project.</p>
+
+<p>I realized that for a first project, this is far more perfect.
+There are several topics / directions that I want to explore for my next elixir project.</p>
+<ul>
+  <li>Dockerize project</li>
+  <li>Metrics (Telemetry)</li>
+  <li>How does elixir perform compared to other modern webserver</li>
+</ul>
+
+<p>While working on this project is challenging, I’m having so much fun writing elixir.
+Exploring elixir gives me a fresh feeling compared to my day programming job.
+But, Elixir as praised as it is, still has its own flaws.</p>
+
+<p>The idiom “there’s no silver bullet solution, just pick the righ tool for the right job” stand true even for it.
+But I think, it’s okay to have your own favourite tool, in my case it might be elixir.</p>
+
+
+<a href="/">&larr; home</a>
+
+    </body>
+</html>
