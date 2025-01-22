@@ -512,7 +512,7 @@ We can also add some options to handle error events, but let's keep it simple fo
 
 Everything is done, let's try out our project.
 
-<video autoplay="autoplay" loop="loop" width="80%" height="auto" controls playsinline>
+<video preload="auto" controls="controls" autoplay="autoplay" loop="loop" width="80%" height="auto">
     <source src="/assets/videos/elixir_quickstart/demo.mp4" type="video/mp4">
 </video>
 
