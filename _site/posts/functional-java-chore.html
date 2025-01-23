@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Rant: Functional in Java is a Chore</title>
+        <link rel="stylesheet" href="/assets/css/styles.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+        <link rel="manifest" href="/assets/images/site.webmanifest">
+        <link rel="mask-icon" href="/assets/images/safari-pinned-tab.svg" color="#5bbad5">
+        <link rel="shortcut icon" href="/assets/images/favicon.ico">
+        <meta name="msapplication-TileColor" content="#da532c">
+        <meta name="msapplication-config" content="/assets/images/browserconfig.xml">
+        <meta name="theme-color" content="#ffffff">
+        <link type="application/atom+xml" rel="alternate" href="/feed.xml" />
+        <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Rant: Functional in Java is a Chore</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="Rant: Functional in Java is a Chore" />
+<meta name="author" content="mat" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Java 8 introduces Stream API, this api comes with classes, interfaces, and enums for processing collection of object (which called Stream). Stream offers basic functional programming capabilities to java: immutability, lazy evaluation, chaining operation, and many more. While the inclusion is pretty good, there are some things that not perfectly ideal. In this post, we’ll go through some of them." />
+<meta property="og:description" content="Java 8 introduces Stream API, this api comes with classes, interfaces, and enums for processing collection of object (which called Stream). Stream offers basic functional programming capabilities to java: immutability, lazy evaluation, chaining operation, and many more. While the inclusion is pretty good, there are some things that not perfectly ideal. In this post, we’ll go through some of them." />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2025-01-25T00:00:00+07:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Rant: Functional in Java is a Chore" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"mat"},"dateModified":"2025-01-25T00:00:00+07:00","datePublished":"2025-01-25T00:00:00+07:00","description":"Java 8 introduces Stream API, this api comes with classes, interfaces, and enums for processing collection of object (which called Stream). Stream offers basic functional programming capabilities to java: immutability, lazy evaluation, chaining operation, and many more. While the inclusion is pretty good, there are some things that not perfectly ideal. In this post, we’ll go through some of them.","headline":"Rant: Functional in Java is a Chore","mainEntityOfPage":{"@type":"WebPage","@id":"/posts/functional-java-chore"},"url":"/posts/functional-java-chore"}</script>
+<!-- End Jekyll SEO tag -->
+
+    </head>
+    <body>
+        <a href="/">&larr; home</a>
+<h1>Rant: Functional in Java is a Chore</h1>
+<span class="post_date">25 Jan 2025 - mat</span>
+
+<p>Java 8 introduces Stream API, this api comes with classes, interfaces, and enums for processing collection of object (which called Stream).
+Stream offers basic functional programming capabilities to java: immutability, lazy evaluation, chaining operation, and many more.
+While the inclusion is pretty good, there are some things that not perfectly ideal.
+In this post, we’ll go through some of them.</p>
+
+<!--more-->
+
+<p>Disclaimer, this is not an exhaustive list and quite likely very subjective.
+As the title suggest, it’s my rant from working with java stream lately.
+It also does not rule out the possibility that my rant is due to “skill issue” on my part.
+That being said, enjoy my rants.</p>
+
+<h1 id="reduce-isnt-reducing">Reduce isn’t Reducing</h1>
+
+<p>Reduce (or fold) is a higher-order function that recursively process a list to build a return value.
+For example, we can use reduce to get the sum from a list (or stream) of integer.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">int</span> <span class="n">sum</span> <span class="o">=</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">asList</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span>
+    <span class="o">.</span><span class="na">stream</span><span class="o">()</span>
+    <span class="o">.</span><span class="na">reduce</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">item</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">acc</span> <span class="o">+</span> <span class="n">item</span><span class="o">);</span>
+<span class="c1">// sum == 15</span>
+</code></pre></div></div>
+
+<p>Pretty neat right?
+We can replace old boring for-loop with more expressive functional style Stream API.</p>
+
+<p>Let’s make it more complicated.
+Imagine you want to convert the list of integer into a combined number word string (e.g. <code class="language-plaintext highlighter-rouge">[1, 2, 3] -&gt; onetwothree</code>).</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">String</span> <span class="n">numWords</span> <span class="o">=</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">asList</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span>
+    <span class="o">.</span><span class="na">stream</span><span class="o">()</span>
+    <span class="c1">// toNumWords will convert integer to its numwords</span>
+    <span class="o">.</span><span class="na">reduce</span><span class="o">(</span><span class="s">""</span><span class="o">,</span> <span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">item</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">acc</span> <span class="o">+</span> <span class="n">toNumWords</span><span class="o">(</span><span class="n">item</span><span class="o">));</span>
+</code></pre></div></div>
+
+<p>Simple, just modify our last snippet and we’re done.
+Except, it’s not. 
+If we try to compile the snippet we will be getting compiler error: <code class="language-plaintext highlighter-rouge">(argument mismatch; String cannot be converted to Integer)</code>.</p>
+
+<p>That’s weird, we have set the initial identity value as an empty string and the accumulator also return string.
+So, why does the compiler complain about the type?</p>
+
+<p>Even weirder, if we use the 3-parameters, reduce function with combiner as the third parameters it will works as expected.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">String</span> <span class="n">numWords</span> <span class="o">=</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">asList</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="o">)</span>
+    <span class="o">.</span><span class="na">stream</span><span class="o">()</span>
+    <span class="o">.</span><span class="na">reduce</span><span class="o">(</span><span class="s">""</span><span class="o">,</span> 
+        <span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">item</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">acc</span> <span class="o">+</span> <span class="n">toNumWords</span><span class="o">(</span><span class="n">item</span><span class="o">),</span>
+        <span class="o">(</span><span class="n">acc1</span><span class="o">,</span> <span class="n">acc2</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">acc1</span> <span class="o">+</span> <span class="n">acc2</span><span class="o">);</span>
+<span class="c1">// numWords == "onetwothreefourfive"</span>
+</code></pre></div></div>
+
+<p>To understand this, we need to know that in java there are two kinds of streams: sequential and parallel.
+As the name suggest, it defined how the stream processed.
+For sequential stream, the stream is processed by a single process.
+On the other hand, parallel stream will be processed by multiple workers.
+To create a parallel stream, we can simply change our <code class="language-plaintext highlighter-rouge">stream()</code> method to <code class="language-plaintext highlighter-rouge">parallelStream()</code>.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">final</span> <span class="kt">int</span> <span class="n">sum</span> <span class="o">=</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">asList</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">2</span><span class="o">,</span> <span class="mi">3</span><span class="o">,</span> <span class="mi">4</span><span class="o">,</span> <span class="mi">5</span><span class="o">,</span> <span class="mi">6</span><span class="o">)</span>
+    <span class="o">.</span><span class="na">parallelStream</span><span class="o">()</span>
+    <span class="o">.</span><span class="na">reduce</span><span class="o">(</span><span class="mi">0</span><span class="o">,</span> <span class="o">(</span><span class="n">acc</span><span class="o">,</span> <span class="n">item</span><span class="o">)</span> <span class="o">-&gt;</span> <span class="n">acc</span> <span class="o">+</span> <span class="n">item</span><span class="o">);</span>
+</code></pre></div></div>
+
+<p>For simplicity, let’s assume that the above snippet will be processed by two thread workers.
+Worker #1 handle the first part (1, 2, 3) and worker #2 handle the last part (4, 5, 6).
+Then, we will have two intermediate results: 6 and 15.</p>
+
+<p><img src="/assets/images/functional-java-chore/parallel_stream.png" alt="Parallel Stream" width="100%" /></p>
+
+<p>How do we get the final result though?
+Simple, the reduce api will apply the accumulator function to those results.
+Because both accumulator result and Stream item type are the same type, applying the function is trivial.</p>
+
+<p><img src="/assets/images/functional-java-chore/parallel_stream_combine.png" alt="Parallel Stream Combine" width="100%" /></p>
+
+<p>Back to our last failure attempt, because the accumulator function return string while its parameters are string and int we can’t simply use the accumulator function.</p>
+
+<p><img src="/assets/images/functional-java-chore/parallel_stream_mismatch.png" alt="Parallel Stream Mismatch" width="100%" /></p>
+
+<p>Hence, we need the second function, the combiner.</p>
+
+<p><img src="/assets/images/functional-java-chore/parallel_stream_with_combiner.png" alt="Parallel Stream With Combiner" width="100%" /></p>
+
+<p>But wait, we weren’t using parallel stream.
+Hence, the stream should be processed sequentially and combiner isn’t needed.
+Surely, it doesn’t matter whether we supply the combiner function right?
+Well, as a matter of fact, it does matter.</p>
+
+<p>You see, the design principle for the stream api is that function implementations shouldn’t be differ between sequential and parallel streams.
+Quoting an <a href="https://stackoverflow.com/a/24316429">answer</a> on stackoverflow:</p>
+<blockquote>
+  <p>A particular API shouldn’t prevent a stream from running correctly either sequentially or in parallel. 
+If your lambdas have the right properties (associative, non-interfering, etc.) a stream run sequentially or in parallel should give the same results.</p>
+</blockquote>
+
+<p>Hence, we need to provide a combiner function even for sequential stream.
+We can argue that if the api were designed differently, the reduce function will be much simpler.
+But, this is design choice and there’s no such thing as the perfect design.</p>
+
+<p>The advantage of this approach is that, we can “simply” change the stream into parallel stream suppose we need it.
+Although, there are pitfalls and different ways for handling parallel stream compared to the sequential one.
+Thus, makes it not quite simple to just plug parallel stream in place of sequential stream.
+Which kinda defeat the whole purpose.</p>
+
+<h1 id="the-forgotten-checked-exceptions">The Forgotten Checked Exceptions</h1>
+
+<p>While working with stream (or java in general).
+We can’t expect the code to always working smoothly, even more when we are working with user input.
+Hence, we have <code class="language-plaintext highlighter-rouge">CheckedException</code> to help tackle this in compile time.
+Checked Exception will force the programmer to either handle the exception or explicitly declare that a function can throw the exception.</p>
+
+<p>Suppose we have list of json string that we want to deserialize to our POJO using <a href="https://github.com/FasterXML/jackson">jackson</a>.</p>
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">Stream</span><span class="o">&lt;</span><span class="nc">Person</span><span class="o">&gt;</span> <span class="n">people</span> <span class="o">=</span> <span class="nc">Arrays</span><span class="o">.</span><span class="na">asList</span><span class="o">(</span><span class="s">"{\"name\": \"x\"}"</span><span class="o">,</span> <span class="s">"{\"name\": \"y\"}"</span><span class="o">)</span>
+    <span class="o">.</span><span class="na">stream</span><span class="o">()</span>
+    <span class="o">.</span><span class="na">map</span><span class="o">(</span><span class="n">item</span> <span class="o">-&gt;</span> <span class="n">objectMapper</span><span class="o">.</span><span class="na">readValue</span><span class="o">(</span><span class="n">item</span><span class="o">,</span> <span class="nc">Person</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+</code></pre></div></div>
+
+<p>Because jackson object mapper throw checked exception, <code class="language-plaintext highlighter-rouge">JsonProcessingException</code>.
+We can declare that our function will also throw that exception.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nc">Stream</span><span class="o">&lt;</span><span class="nc">Person</span><span class="o">&gt;</span> <span class="nf">parseList</span><span class="o">()</span> <span class="kd">throws</span> <span class="nc">JsonProcessingException</span> <span class="o">{</span>
+<span class="o">...</span>
+</code></pre></div></div>
+
+<p>But well things aren’t always that simple.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nl">error:</span> <span class="n">incompatible</span> <span class="n">thrown</span> <span class="n">types</span> <span class="nc">JsonProcessingException</span> <span class="n">in</span> <span class="n">method</span> <span class="n">reference</span>
+        <span class="o">.</span><span class="na">map</span><span class="o">(</span><span class="n">item</span> <span class="o">-&gt;</span> <span class="n">objectMapper</span><span class="o">.</span><span class="na">readValue</span><span class="o">(</span><span class="n">item</span><span class="o">,</span> <span class="nc">Person</span><span class="o">.</span><span class="na">class</span><span class="o">));</span>
+             <span class="o">^</span>
+
+<span class="mi">1</span> <span class="n">error</span>
+</code></pre></div></div>
+
+<p>It’s due to that how the functional interfaces defined currently prevented exception for being forwarded.
+(It’s basically oracle fault, but let’s not getting sidetracked here).
+To handle this, we can wrap our function so it’ll throw unchecked exception instead.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">...</span>
+<span class="o">.</span><span class="na">map</span><span class="o">(</span><span class="n">item</span> <span class="o">-&gt;</span> <span class="o">{</span>
+    <span class="k">try</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">objectMapper</span><span class="o">.</span><span class="na">readValue</span><span class="o">(</span><span class="n">item</span><span class="o">,</span> <span class="nc">Person</span><span class="o">.</span><span class="na">class</span><span class="o">);</span>
+    <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">JsonProcessingException</span> <span class="n">e</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">throw</span> <span class="k">new</span> <span class="nf">RuntimeException</span><span class="o">();</span>
+    <span class="o">}</span>
+<span class="o">});</span>
+</code></pre></div></div>
+
+<p>Except that’s ugly and defeat the purpose of the checked exception.
+Fortunately, good <a href="https://stackoverflow.com/a/30974991">people</a> on the internet has created a hack to workaround this.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">public</span> <span class="kd">final</span> <span class="kd">class</span> <span class="nc">LambdaExceptionUtil</span> <span class="o">{</span>
+    <span class="o">...</span>
+
+    <span class="nd">@FunctionalInterface</span>
+    <span class="kd">public</span> <span class="kd">interface</span> <span class="nc">Consumer_WithExceptions</span><span class="o">&lt;</span><span class="no">T</span><span class="o">,</span> <span class="no">E</span> <span class="kd">extends</span> <span class="nc">Exception</span><span class="o">&gt;</span> <span class="o">{</span>
+        <span class="kt">void</span> <span class="nf">accept</span><span class="o">(</span><span class="no">T</span> <span class="n">t</span><span class="o">)</span> <span class="kd">throws</span> <span class="no">E</span><span class="o">;</span>
+    <span class="o">}</span>
+
+    <span class="cm">/**
+     * .map(rethrowFunction(name -&gt; Class.forName(name))) or .map(rethrowFunction(Class::forName))
+     */</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="o">&lt;</span><span class="no">T</span><span class="o">,</span> <span class="no">R</span><span class="o">,</span> <span class="no">E</span> <span class="kd">extends</span> <span class="nc">Exception</span><span class="o">&gt;</span> <span class="nc">Function</span><span class="o">&lt;</span><span class="no">T</span><span class="o">,</span> <span class="no">R</span><span class="o">&gt;</span> <span class="nf">rethrowFunction</span><span class="o">(</span><span class="n">Function_WithExceptions</span><span class="o">&lt;</span><span class="no">T</span><span class="o">,</span> <span class="no">R</span><span class="o">,</span> <span class="no">E</span><span class="o">&gt;</span> <span class="n">function</span><span class="o">)</span> <span class="kd">throws</span> <span class="no">E</span>  <span class="o">{</span>
+        <span class="k">return</span> <span class="n">t</span> <span class="o">-&gt;</span> <span class="o">{</span>
+            <span class="k">try</span> <span class="o">{</span>
+                <span class="k">return</span> <span class="n">function</span><span class="o">.</span><span class="na">apply</span><span class="o">(</span><span class="n">t</span><span class="o">);</span>
+            <span class="o">}</span> <span class="k">catch</span> <span class="o">(</span><span class="nc">Exception</span> <span class="n">exception</span><span class="o">)</span> <span class="o">{</span>
+                <span class="n">throwActualException</span><span class="o">(</span><span class="n">exception</span><span class="o">);</span>
+                <span class="k">return</span> <span class="kc">null</span><span class="o">;</span>
+            <span class="o">}</span>
+        <span class="o">};</span>
+    <span class="o">}</span>
+    <span class="o">...</span>
+
+    <span class="nd">@SuppressWarnings</span><span class="o">(</span><span class="s">"unchecked"</span><span class="o">)</span>
+    <span class="kd">private</span> <span class="kd">static</span> <span class="o">&lt;</span><span class="no">E</span> <span class="kd">extends</span> <span class="nc">Exception</span><span class="o">&gt;</span> <span class="kt">void</span> <span class="nf">throwActualException</span><span class="o">(</span><span class="nc">Exception</span> <span class="n">exception</span><span class="o">)</span> <span class="kd">throws</span> <span class="no">E</span> <span class="o">{</span>
+        <span class="k">throw</span> <span class="o">(</span><span class="no">E</span><span class="o">)</span> <span class="n">exception</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>Then we can simply use it in our map function.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">...</span>
+<span class="n">map</span><span class="o">(</span><span class="nc">LambdaExceptionUtil</span>
+    <span class="o">.</span><span class="na">rethrowFunction</span><span class="o">(</span><span class="n">item</span> <span class="o">-&gt;</span> <span class="n">objectMapper</span><span class="o">.</span><span class="na">readValue</span><span class="o">(</span><span class="n">item</span><span class="o">,</span> <span class="nc">Person</span><span class="o">.</span><span class="na">class</span><span class="o">)))</span>
+</code></pre></div></div>
+
+<p>Although, this approach can’t be used for function that throw multiple exceptions.
+On that case, the compiler will instead throw the common supertype (e.g. <code class="language-plaintext highlighter-rouge">Exception</code>).</p>
+
+<p>For a language that heavily utilize Exception handler, it’s kinda baffling that somehow oracle “forgot” to implement it while making the Stream API.
+Now that it comes to this, I doubt that this will ever get fixed.
+Considering fixing this might likely break userland code.</p>
+
+<h1 id="afterword">Afterword</h1>
+
+<p>Both issues are quite common to encounter while working with Stream.
+In fact, both issues has their own discussions on stackoverflow (<a href="https://stackoverflow.com/questions/24308146/why-is-a-combiner-needed-for-reduce-method-that-converts-type-in-java-8">reduce</a> &amp; <a href="https://stackoverflow.com/questions/27644361/how-can-i-throw-checked-exceptions-from-inside-java-8-lambdas-streams">checked exception</a>).
+And this post is my poor attempt on explaining them based on my understanding.</p>
+
+<p>It’s possible that all that problems are insignificant, and it’s due to my lack of understanding of the language that makes it seem irritating.
+Regardless, there’s one thing that I can’t believe though.
+Even after all this time, oracle still manages to make my life harder.</p>
+
+
+<a href="/">&larr; home</a>
+
+    </body>
+</html>
