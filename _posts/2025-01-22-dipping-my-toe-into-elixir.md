@@ -669,5 +669,5 @@ While working on this project is challenging, I'm having so much fun writing eli
 Exploring elixir gives me a fresh feeling compared to my day programming job.
 But, Elixir as praised as it is, still has its own flaws.
 
-The idiom "there's no silver bullet solution, just pick the righ tool for the right job" stand true even for it.
+The idiom "there's no silver bullet solution, just pick the right tool for the right job" stand true even for it.
 But I think, it's okay to have your own favourite tool, in my case it might be elixir.
