@@ -1,4 +1,228 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2025-02-10T23:54:57+07:00</updated><id>/feed.xml</id><entry><title type="html">Rant: Functional in Java is a Chore</title><link href="/posts/functional-java-chore" rel="alternate" type="text/html" title="Rant: Functional in Java is a Chore" /><published>2025-01-25T00:00:00+07:00</published><updated>2025-01-25T00:00:00+07:00</updated><id>/posts/functional-java-chore</id><content type="html" xml:base="/posts/functional-java-chore"><![CDATA[<p>Java 8 introduces Stream API, this api comes with classes, interfaces, and enums for processing collection of object (which called Stream).
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2025-02-11T00:02:09+07:00</updated><id>/feed.xml</id><entry><title type="html">Using Curl to Send gRPC Request</title><link href="/posts/curl-grpc" rel="alternate" type="text/html" title="Using Curl to Send gRPC Request" /><published>2025-02-11T00:00:00+07:00</published><updated>2025-02-11T00:00:00+07:00</updated><id>/posts/curl-grpc</id><content type="html" xml:base="/posts/curl-grpc"><![CDATA[<p>gRPC is a well known protocol in microservice software architectures.
+Its low latency and strong contract makes it suitable for inter-service communication compared to plain http.
+But, did you know that gRPC is built atop of http?
+Client and servers in gRPC are communicating using set of contracts on top of http.
+Which means, it’s possible to send gRPC request through http utility tools like curl directly, instead of using its generated client.</p>
+
+<!--more-->
+
+<p>In this post, we’ll go through some gRPC specifications, implementation of a simple client, and use case of such implementation.
+But first, let us define our project scope.</p>
+
+<h1 id="project-scopes">Project Scopes</h1>
+
+<ul>
+  <li>While gRPC support other data structure like JSON for its serialization.
+We will use <a href="https://protobuf.dev/overview">protobuf</a>, as it’s the default data serialization used by gRPC.
+    <ul>
+      <li>On that note, data serialization / deserialization is out of scope of this post.
+As such, we’ll utilize <a href="https://github.com/protobuf-c/protobuf-c">protobuf-c</a>. A c library for protobuf serialization.</li>
+    </ul>
+  </li>
+  <li>gRPC support four kinds of service <a href="https://grpc.io/docs/what-is-grpc/core-concepts/#service-definition">methods</a>.
+For simplicity, we’ll only implement the unary RPC.</li>
+</ul>
+
+<h1 id="overview">Overview</h1>
+
+<p>Take the hello world proto file from the grpc quickstart <a href="https://grpc.io/docs/languages/go/quickstart/">example</a>.</p>
+<div class="language-proto highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">helloworld</span><span class="p">;</span>
+
+<span class="kd">service</span> <span class="n">Greeter</span> <span class="p">{</span>
+  <span class="k">rpc</span> <span class="n">SayHello</span> <span class="p">(</span><span class="n">HelloRequest</span><span class="p">)</span> <span class="k">returns</span> <span class="p">(</span><span class="n">HelloReply</span><span class="p">)</span> <span class="p">{}</span>
+<span class="p">}</span>
+<span class="o">...</span>
+</code></pre></div></div>
+
+<p>The snippet define a simple grpc service with a single method <code class="language-plaintext highlighter-rouge">SayHello</code>.
+Now, let’s reference the grpc http2 protocol <a href="https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md">docs</a> to map the grpc service into a http one.</p>
+<ul>
+  <li><strong>Method</strong> → “:method POST”</li>
+  <li><strong>Path</strong> → “:path” “/” Service-Name “/” {method name}</li>
+  <li><strong>Content-Type</strong> → “content-type” “application/grpc” [(“+proto” / “+json” / {custom})]</li>
+</ul>
+
+<p>Other options are ommited as we’re going to implement only the most basic of a gRPC client.
+But, readers are encouraged to read the complete documentation.</p>
+
+<p>Accordingly, the http request would look like this.</p>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /helloworld.Greeter/SayHello HTTP/2
+Content-Type: application/grpc+proto
+</code></pre></div></div>
+
+<p>Notice that the path is capitalized after the proto service definition.
+It’s due to its definition from the docs.</p>
+<blockquote>
+  <p>Path is case-sensitive.
+Some gRPC implementations may allow the Path format shown above to be overridden, but this functionality is strongly discouraged.</p>
+</blockquote>
+
+<p><code class="language-plaintext highlighter-rouge">Content-Type</code> header with <code class="language-plaintext highlighter-rouge">application/grpc</code> value is also required, as gRPC servers will deny request without it.</p>
+
+<h2 id="data-frames">Data Frames</h2>
+
+<p>For the data, it consists of repeated sequence of <code class="language-plaintext highlighter-rouge">Length-Prefixed-Message</code> items.</p>
+<ul>
+  <li><strong>Length-Prefixed-Message</strong> → Compressed-Flag Message-Length Message</li>
+  <li><strong>Compressed-Flag</strong> → 0 / 1 ; encoded as 1 byte unsigned integer</li>
+  <li><strong>Message-Length</strong> → {length of Message} ; encoded as 4 byte unsigned integer (big endian)</li>
+  <li><strong>Message</strong> → *{binary octet}</li>
+</ul>
+
+<p>It’s quite simple to compose data payload.
+First, we serialize the payload to data structure of our choice (in this case protobuf).
+Then, calculate the length of the serialized data, and encode the length as 4 byte unsigned integer (big endian).
+Prepend the length to the serialized payload.
+Add compressed flag as the prefix for the final payload.</p>
+
+<p><img src="/assets/images/curl-grpc/payload_example.png" alt="Example Message" width="100%" /></p>
+
+<p>Readers might notice that the data frame consist of <code class="language-plaintext highlighter-rouge">repeated</code> sequence of message, implying that the data payload might contains more than one message.
+If you’re wondering whether this is true, then you’re correct!
+Streaming gRPC will send multiple sequence of message in request / response (depend on whether it’s server, client, or bidirectional streaming).
+The server / client are required to read the data until EOS (end-of-stream) which indicated by <code class="language-plaintext highlighter-rouge">END_STREAM</code> flag.</p>
+
+<h2 id="data-serialization">Data Serialization</h2>
+
+<p>As mentioned, we’re going to use protobuf-c for serialization.
+We need to install both protobuf compiler (<a href="https://github.com/protocolbuffers/protobuf">protoc</a>) and <a href="https://github.com/protobuf-c/protobuf-c">protobuf-c</a>.
+Then we can generate .pb-c.* files for the project.</p>
+
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>protoc <span class="nt">--c_out</span><span class="o">=</span><span class="nb">.</span> helloworld.proto
+</code></pre></div></div>
+
+<p>Generated header need to be included in the project.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">"helloworld.pb-c.h"</span><span class="cp">
+</span></code></pre></div></div>
+
+<p>Remember to also include the generated code and protobuf-c library.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code># meson.build
+deps = [
+    dependency('libprotobuf-c', version: '&gt;= 1.0.0'),
+    ...
+    ]
+
+sources = [..., 'helloworld.pb-c.c']
+</code></pre></div></div>
+
+<blockquote>
+  <p>The project will use meson as its build system instead of autotools due to its simplicity.
+I might elaborate more on this further in a future post.</p>
+</blockquote>
+
+<h1 id="implementation">Implementation</h1>
+
+<blockquote>
+  <p>Talk is cheap, show me the code.</p>
+</blockquote>
+
+<p>As usual, the post will only contains snippet of codes.
+Readers can find the full <a href="https://github.com/alvinmatias69/curl_grpc">repository</a> on my github.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#define PREFIX_LENGTH 5
+</span>
+<span class="p">...</span>
+
+<span class="n">Helloworld__HelloRequest</span> <span class="n">request</span> <span class="o">=</span> <span class="n">HELLOWORLD__HELLO_REQUEST__INIT</span><span class="p">;</span>
+<span class="kt">uint8_t</span> <span class="o">*</span><span class="n">buf</span><span class="p">;</span>
+<span class="kt">size_t</span> <span class="n">len</span><span class="p">;</span>
+
+<span class="n">request</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+<span class="n">len</span> <span class="o">=</span> <span class="n">helloworld__hello_request__get_packed_size</span><span class="p">(</span><span class="o">&amp;</span><span class="n">request</span><span class="p">);</span>
+<span class="n">buf</span> <span class="o">=</span> <span class="n">malloc</span><span class="p">(</span><span class="n">PREFIX_LENGTH</span> <span class="o">+</span> <span class="n">len</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>First, we initialize the request message with command argument as its payload.
+Then, we calculate its packed size to allocate a buffer for the serialized data.
+Notice that we add the <code class="language-plaintext highlighter-rouge">5</code> prefix length to reserve the prefix data (compression flag and payload size).</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="c1">// Set the compression flag to zero</span>
+
+<span class="c1">// set message length in big endian</span>
+<span class="kt">int</span> <span class="o">*</span><span class="n">bin</span> <span class="o">=</span> <span class="n">dec_to_bin</span><span class="p">(</span><span class="n">len</span><span class="p">,</span> <span class="mi">32</span><span class="p">);</span>
+<span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">idx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">idx</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">;</span> <span class="n">idx</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">long</span> <span class="n">num</span> <span class="o">=</span> <span class="n">bin_to_dec</span><span class="p">(</span><span class="n">bin</span> <span class="o">+</span> <span class="n">idx</span> <span class="o">*</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">);</span>
+  <span class="n">buf</span><span class="p">[</span><span class="mi">4</span> <span class="o">-</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">num</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="n">free</span><span class="p">(</span><span class="n">bin</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Setting the compression flag to false (<code class="language-plaintext highlighter-rouge">0</code>) for simplicity sake.
+The length need to be encoded as 4 byte big-endian number.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">helloworld__hello_request__pack</span><span class="p">(</span><span class="o">&amp;</span><span class="n">request</span><span class="p">,</span> <span class="n">buf</span> <span class="o">+</span> <span class="n">PREFIX_LENGTH</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Last, the request payload need to be packed to the malloced buffer.
+Remember, the first 5 byte is reserved for the prefix.</p>
+
+<p>All done for the message building.
+We can then send this buffer to our grpc server.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_URL</span><span class="p">,</span>
+                  <span class="s">"http://localhost:50051/helloworld.Greeter/SayHello"</span><span class="p">);</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_HTTP_VERSION</span><span class="p">,</span>
+                  <span class="n">CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE</span><span class="p">);</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_POSTFIELDS</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_POSTFIELDSIZE</span><span class="p">,</span> <span class="n">len</span> <span class="o">+</span> <span class="n">PREFIX_LENGTH</span><span class="p">);</span>
+<span class="k">struct</span> <span class="n">curl_slist</span> <span class="o">*</span><span class="n">headers</span> <span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+<span class="n">headers</span> <span class="o">=</span> <span class="n">curl_slist_append</span><span class="p">(</span><span class="n">headers</span><span class="p">,</span> <span class="s">"Content-Type: application/grpc+proto"</span><span class="p">);</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_HTTPHEADER</span><span class="p">,</span> <span class="n">headers</span><span class="p">);</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_WRITEFUNCTION</span><span class="p">,</span> <span class="n">handle_callback</span><span class="p">);</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_WRITEDATA</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>As explained, we only set the necessary headers option to keep the project simple.
+Notice that we set <code class="language-plaintext highlighter-rouge">CURL_HTTP_VERSION_2_PRIOR_KNOWLEDGE</code>, this way curl will use <code class="language-plaintext highlighter-rouge">http/2</code> directly instead of trying to upgrade the connection from <code class="language-plaintext highlighter-rouge">http/1.1</code>.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">size_t</span> <span class="nf">handle_callback</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">ptr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nmemb</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">userdata</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">size_t</span> <span class="n">realsize</span> <span class="o">=</span> <span class="n">size</span> <span class="o">*</span> <span class="n">nmemb</span><span class="p">;</span>
+
+  <span class="n">Helloworld__HelloReply</span> <span class="o">*</span><span class="n">response</span> <span class="o">=</span> <span class="n">helloworld__hello_reply__unpack</span><span class="p">(</span>
+      <span class="nb">NULL</span><span class="p">,</span> <span class="n">realsize</span> <span class="o">-</span> <span class="n">PREFIX_LENGTH</span><span class="p">,</span> <span class="n">ptr</span> <span class="o">+</span> <span class="n">PREFIX_LENGTH</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">response</span> <span class="o">==</span> <span class="nb">NULL</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">"error unpacking incoming message</span><span class="se">\n</span><span class="s">"</span><span class="p">);</span>
+    <span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"response msg: %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">response</span><span class="o">-&gt;</span><span class="n">msg</span><span class="p">);</span>
+  <span class="n">helloworld__hello_reply__free_unpacked</span><span class="p">(</span><span class="n">response</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">realsize</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We took a shortcut on handling the response.
+Because our server is set to only return a single message, we can simply read all the response and be done with it.
+On a production code though, we need to read the response until <code class="language-plaintext highlighter-rouge">END_STREAM</code> flag.
+And instead of treating it as a single message, we also need to read the first 5 byte prefix and then handle it appropriately.
+But for now, we can simply ignore the prefix and deserialize it into a single message.</p>
+
+<p>We can use the helloworld example from the <a href="https://github.com/grpc/grpc-go">grpc-go repository</a> as the test server.</p>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>git clone git@github.com:grpc/grpc-go.git
+<span class="nv">$ </span><span class="nb">cd </span>grpc-go/examples/helloworld/greeter_server/
+<span class="nv">$ </span>go run main.go
+</code></pre></div></div>
+
+<p>Now, we can test our simple gRPC client.</p>
+<div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./builddir/curl_grpc curl_world
+response msg: Hello curl_world
+</code></pre></div></div>
+
+<h1 id="conclusion-and-future-works">Conclusion and Future Works</h1>
+
+<p>While the approach works, the project is nothing more than a proof of concept.
+On a production code, using a proper grpc client library (e.g. <a href="https://github.com/Juniper/grpc-c">juniper grpc-c</a>) is strongly recommended.
+Our main goal for this project is to demystify grpc protocol by recreating it from the simplest form.</p>
+
+<p>While not ideal for production usage, this approach might come in handy in development tools, like <a href="https://github.com/bloomrpc/bloomrpc">bloomrpc</a>.
+For such tools, generic approach using basic library is more favourable due to its flexibility.
+(In fact, I’m also working on a tool exactly like that!)</p>
+
+<p>gRPC itself isn’t complete until we discuss proto serialization in details.
+Hence, it might be the theme of my future post.
+Thanks for reading!</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[gRPC is a well known protocol in microservice software architectures. Its low latency and strong contract makes it suitable for inter-service communication compared to plain http. But, did you know that gRPC is built atop of http? Client and servers in gRPC are communicating using set of contracts on top of http. Which means, it’s possible to send gRPC request through http utility tools like curl directly, instead of using its generated client.]]></summary></entry><entry><title type="html">Rant: Functional in Java is a Chore</title><link href="/posts/functional-java-chore" rel="alternate" type="text/html" title="Rant: Functional in Java is a Chore" /><published>2025-01-25T00:00:00+07:00</published><updated>2025-01-25T00:00:00+07:00</updated><id>/posts/functional-java-chore</id><content type="html" xml:base="/posts/functional-java-chore"><![CDATA[<p>Java 8 introduces Stream API, this api comes with classes, interfaces, and enums for processing collection of object (which called Stream).
 Stream offers basic functional programming capabilities to java: immutability, lazy evaluation, chaining operation, and many more.
 While the inclusion is pretty good, there are some things that not perfectly ideal.
 In this post, we’ll go through some of them.</p>
