@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Create Protobuf Message Without Compiled Generated Code</title>
+        <link rel="stylesheet" href="/assets/css/styles.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
+        <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+        <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+        <link rel="manifest" href="/assets/images/site.webmanifest">
+        <link rel="mask-icon" href="/assets/images/safari-pinned-tab.svg" color="#5bbad5">
+        <link rel="shortcut icon" href="/assets/images/favicon.ico">
+        <meta name="msapplication-TileColor" content="#da532c">
+        <meta name="msapplication-config" content="/assets/images/browserconfig.xml">
+        <meta name="theme-color" content="#ffffff">
+        <link type="application/atom+xml" rel="alternate" href="/feed.xml" />
+        <!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Create Protobuf Message Without Compiled Generated Code</title>
+<meta name="generator" content="Jekyll v4.2.2" />
+<meta property="og:title" content="Create Protobuf Message Without Compiled Generated Code" />
+<meta name="author" content="mat" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Protocol Buffers (protobuf) are a language-neutral, platform-neutral extensible mechanism for serializing structured data. It’s the primary message format for gRPC, usually serialized and deserialized through native generated code. While using generated code is favourable for production software due to its fast and easy message parsing, there’s also a time where we might not unable to use generated code. For example, development tools like Postman. In this post, we will explore the possibility of parsing protobuf message without generated code." />
+<meta property="og:description" content="Protocol Buffers (protobuf) are a language-neutral, platform-neutral extensible mechanism for serializing structured data. It’s the primary message format for gRPC, usually serialized and deserialized through native generated code. While using generated code is favourable for production software due to its fast and easy message parsing, there’s also a time where we might not unable to use generated code. For example, development tools like Postman. In this post, we will explore the possibility of parsing protobuf message without generated code." />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2026-01-13T00:00:00+07:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Create Protobuf Message Without Compiled Generated Code" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"mat"},"dateModified":"2026-01-13T00:00:00+07:00","datePublished":"2026-01-13T00:00:00+07:00","description":"Protocol Buffers (protobuf) are a language-neutral, platform-neutral extensible mechanism for serializing structured data. It’s the primary message format for gRPC, usually serialized and deserialized through native generated code. While using generated code is favourable for production software due to its fast and easy message parsing, there’s also a time where we might not unable to use generated code. For example, development tools like Postman. In this post, we will explore the possibility of parsing protobuf message without generated code.","headline":"Create Protobuf Message Without Compiled Generated Code","mainEntityOfPage":{"@type":"WebPage","@id":"/posts/protobuf-runtime-message-encode"},"url":"/posts/protobuf-runtime-message-encode"}</script>
+<!-- End Jekyll SEO tag -->
+
+    </head>
+    <body>
+        <a href="/">&larr; home</a>
+<h1>Create Protobuf Message Without Compiled Generated Code</h1>
+<span class="post_date">13 Jan 2026 - mat</span>
+
+<p>Protocol Buffers (protobuf) are a language-neutral, platform-neutral extensible mechanism for serializing structured data.
+It’s the primary message format for gRPC, usually serialized and deserialized through native generated code.
+While using generated code is favourable for production software due to its fast and easy message parsing, there’s also a time where we might not unable to use generated code.
+For example, development tools like Postman.
+In this post, we will explore the possibility of parsing protobuf message without generated code.</p>
+
+<!--more-->
+
+<p>Protobuf message is binary serialized, hence it’s almost impossible to create the message by hand, unlike json.
+Fortunately, <code class="language-plaintext highlighter-rouge">protoc</code> (protobuf compiler) provide helper to encode and decode message from and to binary format from its text format.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># encode payload from STDIN and put the result in STDOUT</span>
+<span class="nv">$ </span>protoc <span class="nt">--encode</span><span class="o">=</span>&lt;package.messageName&gt; &lt;protoFile&gt;
+
+<span class="c"># decode payload from STDIN and put the result in STDOUT</span>
+<span class="nv">$ </span>protoc <span class="nt">--decode</span><span class="o">=</span>&lt;package.messageName&gt; &lt;protoFile&gt;
+</code></pre></div></div>
+
+<p>For example, suppose we have this proto file:</p>
+
+<div class="language-proto highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// helloworld.proto</span>
+<span class="na">syntax</span> <span class="o">=</span> <span class="s">"proto3"</span><span class="p">;</span>
+
+<span class="kn">package</span> <span class="nn">helloworld</span><span class="p">;</span>
+
+<span class="o">...</span>
+
+<span class="kd">message</span> <span class="nc">HelloRequest</span> <span class="p">{</span>
+  <span class="kt">string</span> <span class="na">name</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="o">...</span>
+</code></pre></div></div>
+
+<p>And this <code class="language-plaintext highlighter-rouge">HelloRequest</code> message in text format.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>name: "This is example payload"
+</code></pre></div></div>
+
+<p>We can then encode the binary message accordingly.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>protoc &lt; text_payload <span class="nt">--encode</span><span class="o">=</span>helloworld.HelloRequest helloworld.proto <span class="o">&gt;</span> encoded_payload
+</code></pre></div></div>
+
+<p>Conversely, we can decode it back to text format.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>protoc &lt; encoded_payload <span class="nt">--decode</span><span class="o">=</span>helloworld.HelloRequest helloworld.proto <span class="o">&gt;</span> text_payload
+</code></pre></div></div>
+
+<blockquote>
+  <p>Reader might be wondering what is this text format.
+It’s a format used to represent protobuf data in plain text, usually used for test or configuration.
+Reader can check its <a href="https://protobuf.dev/reference/protobuf/textformat-spec/">documentation</a> for more informations.</p>
+</blockquote>
+
+<p>Knowing this, we can utilize this to encode/decode protobuf message programatically without generated code.</p>
+
+<h1 id="implementation">Implementation</h1>
+
+<p>On my previous <a href="https://blog.matiasalvin.dev/posts/curl-grpc">post</a>, we created a simple application to send gRPC request using libcurl.
+Let’s improve it so the project doesn’t need the generated code to encode proto message.</p>
+
+<blockquote>
+  <p>Reader can check the complete changes on the project <a href="https://github.com/alvinmatias69/curl_grpc/tree/protoc_encoding">repo</a></p>
+</blockquote>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">char</span> <span class="n">command</span><span class="p">[</span><span class="mi">255</span><span class="p">];</span>
+<span class="n">sprintf</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="s">"protoc --encode=helloworld.HelloRequest %s &gt; encoded_payload"</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span> <span class="c1">// the protofile is passed through the first argument</span>
+<span class="kt">FILE</span> <span class="o">*</span><span class="n">encode_pipe</span> <span class="o">=</span> <span class="n">popen</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="s">"w"</span><span class="p">);</span>
+<span class="n">fputs</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">encode_pipe</span><span class="p">);</span> <span class="c1">// the text format request payload is passed through the second argument</span>
+</code></pre></div></div>
+
+<p>First, instead of relying to generated code to encode the message, we use <code class="language-plaintext highlighter-rouge">popen</code> create a pipe that execute the protoc command.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">stat</span> <span class="n">st</span><span class="p">;</span>
+<span class="n">stat</span><span class="p">(</span><span class="s">"encoded_payload"</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">st</span><span class="p">);</span>
+<span class="kt">size_t</span> <span class="n">len</span> <span class="o">=</span> <span class="n">st</span><span class="p">.</span><span class="n">st_size</span><span class="p">;</span>
+<span class="kt">uint8_t</span> <span class="o">*</span><span class="n">buf</span><span class="p">;</span>
+<span class="n">buf</span> <span class="o">=</span> <span class="n">malloc</span><span class="p">(</span><span class="n">PREFIX_LENGTH</span> <span class="o">+</span> <span class="n">len</span><span class="p">);</span>
+<span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="p">...</span> <span class="c1">// code to generate prefix payload</span>
+<span class="kt">FILE</span> <span class="o">*</span><span class="n">encoded_payload</span> <span class="o">=</span><span class="n">fopen</span><span class="p">(</span><span class="s">"encoded_payload"</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">);</span>
+<span class="n">fread</span><span class="p">(</span><span class="n">buf</span><span class="o">+</span><span class="n">PREFIX_LENGTH</span><span class="p">,</span> <span class="n">len</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="n">encoded_payload</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Then, we read the encoded payload and put it to our payload buffer.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">curl_global_init</span><span class="p">(</span><span class="n">CURL_GLOBAL_ALL</span><span class="p">);</span>
+<span class="n">CURL</span> <span class="o">*</span><span class="n">curl</span> <span class="o">=</span> <span class="n">curl_easy_init</span><span class="p">();</span>
+<span class="p">...</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_POSTFIELDS</span><span class="p">,</span> <span class="n">buf</span><span class="p">);</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_POSTFIELDSIZE</span><span class="p">,</span> <span class="n">len</span> <span class="o">+</span> <span class="n">PREFIX_LENGTH</span><span class="p">);</span>
+<span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_WRITEDATA</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+</code></pre></div></div>
+
+<p>The rest is still the same, send the payload using libcurl.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">size_t</span> <span class="nf">handle_callback</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">ptr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nmemb</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">userdata</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">char</span> <span class="n">command</span><span class="p">[</span><span class="mi">255</span><span class="p">];</span>
+  <span class="n">sprintf</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="s">"protoc --decode=helloworld.HelloReply %s &gt; response_decoded"</span><span class="p">,</span> <span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="p">)</span> <span class="n">userdata</span><span class="p">);</span>
+  <span class="kt">FILE</span> <span class="o">*</span><span class="n">decode_pipe</span> <span class="o">=</span> <span class="n">popen</span><span class="p">(</span><span class="n">command</span><span class="p">,</span> <span class="s">"w"</span><span class="p">);</span>
+  <span class="n">fputs</span><span class="p">(</span><span class="n">ptr</span><span class="o">+</span><span class="n">PREFIX_LENGTH</span><span class="p">,</span> <span class="n">decode_pipe</span><span class="p">);</span>
+  <span class="n">pclose</span><span class="p">(</span><span class="n">decode_pipe</span><span class="p">);</span>
+
+  <span class="k">return</span> <span class="n">size</span> <span class="o">*</span> <span class="n">nmemb</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Conversely, we can use the same trick to decode the response.
+Now, we can test whether our application works.</p>
+
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./curl_grpc helloworld.proto <span class="s2">"name: </span><span class="se">\"</span><span class="s2">inline payload</span><span class="se">\"</span><span class="s2">"</span>
+<span class="nv">$ </span><span class="nb">cat </span>response_decoded
+<span class="c"># msg: "Hello inline payload"</span>
+</code></pre></div></div>
+
+<p>It works! With a simple change, we can remove dependency to generated code.
+Although, there are few concerns regarding this approach.</p>
+<ul>
+  <li>Payload needs to be in protobuf text format, which is not widely known (and might not be standard).</li>
+  <li>Due to <code class="language-plaintext highlighter-rouge">popen</code> unidirectional nature, we need to have temporary file to store either the input or output. (there’s a <code class="language-plaintext highlighter-rouge">popen2</code> implementation that address this exact concern, but that’s non-standar AFAIK)</li>
+  <li>Performance and utilization also might not be optimal, considering we need to fork and executing shell everytime.</li>
+</ul>
+
+<p>Fortunately, because the <code class="language-plaintext highlighter-rouge">protoc</code> support the on the fly encoding and its <a href="https://github.com/protocolbuffers/protobuf">library</a> is also open source.
+We can take a peek at the code and use it directly.</p>
+
+<blockquote>
+  <p>The bad news is, the library is written using c++.
+The last time I write c++ was more than ten years ago, in college data structure class.
+Hence, the code might be more slop than the usual.
+For that, I’m really sorry <code class="language-plaintext highlighter-rouge">m(_ _)m</code></p>
+</blockquote>
+
+<h1 id="kinda-proper-implementation">(Kinda) Proper Implementation</h1>
+
+<blockquote>
+  <p>Reader can check the complete changes on the project <a href="https://github.com/alvinmatias69/curl_grpc/tree/protobuf_cpp">repo</a></p>
+</blockquote>
+
+<p>First, we need to modify our <code class="language-plaintext highlighter-rouge">meson.build</code> system to change the project language to c++</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>project('curl_grpc', 'cpp',
+  version : '0.1',
+  default_options : ['warning_level=3'])
+
+cc = meson.get_compiler('cpp')
+...
+sources = ['curl_grpc.cc']
+</code></pre></div></div>
+
+<p>Also, add additional libraries for protobuf encoding.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>protobuf = dependency('protobuf',
+    version : '&gt;= 2.6.0',
+    native : true)
+
+libprotoc = cc.find_library('protoc',
+    dirs : protobuf.get_pkgconfig_variable('libdir'))
+
+deps = [
+    dependency('libcurl', version: '&gt;=7.50.0'),
+    m_dep,
+    protobuf,
+    libprotoc,
+    ]
+</code></pre></div></div>
+
+<p>Then we can use the library in our code.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;google/protobuf/util/json_util.h&gt;</span><span class="cp">
+</span>  <span class="p">...</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">payload</span><span class="p">;</span>
+  <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">util</span><span class="o">::</span><span class="n">Status</span> <span class="n">status</span> <span class="o">=</span> <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">util</span><span class="o">::</span><span class="n">JsonToBinaryString</span><span class="p">(</span><span class="n">type_resolver</span><span class="p">,</span> <span class="s">"type.googleapis.com/helloworld.HelloRequest"</span><span class="p">,</span> <span class="n">argv</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="o">&amp;</span><span class="n">payload</span><span class="p">);</span>
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">status</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"fail to parse json to proto message</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="kt">size_t</span> <span class="n">len</span> <span class="o">=</span> <span class="n">payload</span><span class="p">.</span><span class="n">length</span><span class="p">();</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">uint8_t</span><span class="o">&gt;</span> <span class="n">buf</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+  <span class="n">buf</span><span class="p">.</span><span class="n">insert</span><span class="p">(</span><span class="n">buf</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span> <span class="n">payload</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">payload</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+  <span class="p">...</span>
+</code></pre></div></div>
+
+<p>For this, we utilize <a href="https://protobuf.dev/reference/cpp/api-docs/google.protobuf.util.json_util/">json_util.h</a> a library header that provide functions to parse json to protobuf binary message and vice-versa.
+Exactly what we need.</p>
+
+<p>But first, we need to create the <a href="https://protobuf.dev/reference/cpp/api-docs/google.protobuf.util.type_resolver/">type resolver</a> so the json parser can understand our data better.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;google/protobuf/util/type_resolver.h&gt;</span><span class="cp">
+#include</span> <span class="cpf">&lt;google/protobuf/util/type_resolver_util.h&gt;</span><span class="cp">
+</span>
+  <span class="p">...</span>
+  <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">util</span><span class="o">::</span><span class="n">TypeResolver</span> <span class="o">*</span><span class="n">type_resolver</span> <span class="o">=</span> <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">util</span><span class="o">::</span><span class="n">NewTypeResolverForDescriptorPool</span><span class="p">(</span><span class="s">"type.googleapis.com"</span><span class="p">,</span> <span class="n">fd</span><span class="o">-&gt;</span><span class="n">pool</span><span class="p">());</span>
+  <span class="p">...</span>
+</code></pre></div></div>
+
+<p>And we need to provide <a href="https://protobuf.dev/reference/cpp/api-docs/google.protobuf.descriptor/#DescriptorPool">descriptor pool</a> for the type resolver.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include</span> <span class="cpf">&lt;google/protobuf/compiler/importer.h&gt;</span><span class="cp">
+</span>
+  <span class="p">...</span>
+  <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">compiler</span><span class="o">::</span><span class="n">MultiFileErrorCollector</span> <span class="o">*</span><span class="n">error_collector</span> <span class="o">=</span> <span class="n">new</span> <span class="nf">SimpleErrorCollector</span><span class="p">();</span>
+  <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">compiler</span><span class="o">::</span><span class="n">DiskSourceTree</span> <span class="o">*</span><span class="n">source_tree</span> <span class="o">=</span> <span class="n">new</span> <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">compiler</span><span class="o">::</span><span class="n">DiskSourceTree</span><span class="p">();</span>
+  <span class="n">source_tree</span><span class="o">-&gt;</span><span class="n">MapPath</span><span class="p">(</span><span class="s">""</span><span class="p">,</span> <span class="s">"."</span><span class="p">);</span>
+
+  <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">compiler</span><span class="o">::</span><span class="n">Importer</span> <span class="o">*</span><span class="n">importer</span> <span class="o">=</span> <span class="n">new</span> <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">compiler</span><span class="o">::</span><span class="n">Importer</span><span class="p">(</span><span class="n">source_tree</span><span class="p">,</span> <span class="n">error_collector</span><span class="p">);</span>
+  <span class="k">const</span> <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">FileDescriptor</span> <span class="o">*</span><span class="n">fd</span> <span class="o">=</span> <span class="n">importer</span><span class="o">-&gt;</span><span class="n">Import</span><span class="p">(</span><span class="n">argv</span><span class="p">[</span><span class="mi">1</span><span class="p">]);</span>
+  <span class="p">...</span>
+</code></pre></div></div>
+
+<p>Basically, the descriptor pool is a pool of descriptor data derived from a proto file.
+We use the <a href="https://protobuf.dev/reference/cpp/api-docs/google.protobuf.compiler.importer/">importer</a> for this, so the library will resolve any import needed for given proto file.</p>
+
+<p>Also, we need to create an implementation for the <a href="https://protobuf.dev/reference/cpp/api-docs/google.protobuf.compiler.importer/#MultiFileErrorCollector">error collector</a>.
+For now, a simple printing should be sufficient.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">class</span> <span class="n">SimpleErrorCollector</span> <span class="o">:</span> <span class="n">public</span> <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">compiler</span><span class="o">::</span><span class="n">MultiFileErrorCollector</span> <span class="p">{</span>
+<span class="nl">public:</span>
+  <span class="kt">void</span> <span class="n">AddError</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">int</span> <span class="n">line</span><span class="p">,</span> <span class="kt">int</span> <span class="n">column</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span> <span class="n">message</span><span class="p">)</span> <span class="n">override</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"error processing "</span> <span class="o">&lt;&lt;</span> <span class="n">filename</span> <span class="o">&lt;&lt;</span> <span class="s">" on line: "</span> <span class="o">&lt;&lt;</span> <span class="n">line</span> <span class="o">&lt;&lt;</span> <span class="s">" column: "</span> <span class="o">&lt;&lt;</span> <span class="n">column</span> <span class="o">&lt;&lt;</span> <span class="s">" message: "</span> <span class="o">&lt;&lt;</span> <span class="n">message</span> <span class="o">&lt;&lt;</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+  <span class="p">}</span>
+
+  <span class="kt">void</span> <span class="n">AddWarning</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span> <span class="n">filename</span><span class="p">,</span> <span class="kt">int</span> <span class="n">line</span><span class="p">,</span> <span class="kt">int</span> <span class="n">column</span><span class="p">,</span> <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="o">&amp;</span> <span class="n">message</span><span class="p">)</span> <span class="n">override</span> <span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"warning processing "</span> <span class="o">&lt;&lt;</span> <span class="n">filename</span> <span class="o">&lt;&lt;</span> <span class="s">" on line: "</span> <span class="o">&lt;&lt;</span> <span class="n">line</span> <span class="o">&lt;&lt;</span> <span class="s">" column: "</span> <span class="o">&lt;&lt;</span> <span class="n">column</span> <span class="o">&lt;&lt;</span> <span class="s">" message: "</span> <span class="o">&lt;&lt;</span> <span class="n">message</span> <span class="o">&lt;&lt;</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>Similarly, we can use the library to decode the binary message to json as well.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">size_t</span> <span class="nf">handle_callback</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">ptr</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">size</span><span class="p">,</span> <span class="kt">size_t</span> <span class="n">nmemb</span><span class="p">,</span> <span class="kt">void</span> <span class="o">*</span><span class="n">userdata</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">payload_json</span><span class="p">;</span>
+  <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">util</span><span class="o">::</span><span class="n">TypeResolver</span> <span class="o">*</span><span class="n">type_resolver</span> <span class="o">=</span> <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">util</span><span class="o">::</span><span class="n">NewTypeResolverForDescriptorPool</span><span class="p">(</span><span class="s">"type.googleapis.com"</span><span class="p">,</span> <span class="p">(</span><span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">DescriptorPool</span> <span class="o">*</span><span class="p">)</span> <span class="n">userdata</span><span class="p">);</span>
+  <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">util</span><span class="o">::</span><span class="n">Status</span> <span class="n">status_second</span> <span class="o">=</span> <span class="n">google</span><span class="o">::</span><span class="n">protobuf</span><span class="o">::</span><span class="n">util</span><span class="o">::</span><span class="n">BinaryToJsonString</span><span class="p">(</span><span class="n">type_resolver</span><span class="p">,</span> <span class="s">"type.googleapis.com/helloworld.HelloReply"</span><span class="p">,</span> <span class="n">ptr</span><span class="o">+</span><span class="n">PREFIX_LENGTH</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">payload_json</span><span class="p">);</span>
+
+  <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">status_second</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"fail to parse message to json</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+  <span class="k">else</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"response: "</span> <span class="o">&lt;&lt;</span> <span class="n">payload_json</span> <span class="o">&lt;&lt;</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+
+  <span class="k">return</span> <span class="n">size</span> <span class="o">*</span> <span class="n">nmemb</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Notice that we’re not recreating the descriptor pool.
+This is due to the pool is passed to the callback.</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="p">...</span>
+  <span class="n">curl_easy_setopt</span><span class="p">(</span><span class="n">curl</span><span class="p">,</span> <span class="n">CURLOPT_WRITEDATA</span><span class="p">,</span> <span class="n">fd</span><span class="o">-&gt;</span><span class="n">pool</span><span class="p">());</span>
+  <span class="p">...</span>
+</code></pre></div></div>
+<p>This way, we don’t need to rebuild the descriptor pool over for a same protofile.</p>
+
+<p>And that’s it, we can now test it.</p>
+<div class="language-sh highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>./curl_grpc helloworld.proto <span class="s2">"{</span><span class="se">\"</span><span class="s2">name</span><span class="se">\"</span><span class="s2">: </span><span class="se">\"</span><span class="s2">hello json</span><span class="se">\"</span><span class="s2">}"</span>
+<span class="c"># response: {"msg":"Hello hello json"}</span>
+</code></pre></div></div>
+
+<p>The request and response is now in string json format.
+And we don’t need to fork a new shell process each time we encode / decode protobuf message.
+Neat!</p>
+
+<h1 id="closing-thought">Closing Thought</h1>
+
+<p>This (and the previous) concepts are born from my idea to create a lightweight postman-like grpc tools.
+While this proof of concept works, there are things that I need to clear before I can put it on a production application.</p>
+
+<p>Due to my unfamiliarity with cpp, I think it’s better to contain the cpp code in a shared library and expose C functions from them.
+Even then, I still need to learn much more about cpp so I can make more optimized library than this slop.
+Also, I need to iron out details on the application, such as supporting stream message and more complicated proto import.</p>
+
+<p>The production grade application might be still far in the future.
+But this is a great stepping stone, a solution that I’ve been looking for some times.
+So then, until next time!</p>
+
+
+<a href="/">&larr; home</a>
+
+    </body>
+</html>
