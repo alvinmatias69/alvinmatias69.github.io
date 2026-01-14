@@ -156,7 +156,7 @@ Now, we can test whether our application works.</p>
 Although, there are few concerns regarding this approach.</p>
 <ul>
   <li>Payload needs to be in protobuf text format, which is not widely known (and might not be standard).</li>
-  <li>Due to <code class="language-plaintext highlighter-rouge">popen</code> unidirectional nature, we need to have temporary file to store either the input or output. (there’s a <code class="language-plaintext highlighter-rouge">popen2</code> implementation that address this exact concern, but that’s non-standar AFAIK)</li>
+  <li>Due to <code class="language-plaintext highlighter-rouge">popen</code> unidirectional nature, we need to have temporary file to store either the input or output. (there’s a <code class="language-plaintext highlighter-rouge">popen2</code> implementation that address this exact concern, but that’s non-standard AFAIK)</li>
   <li>Performance and utilization also might not be optimal, considering we need to fork and executing shell everytime.</li>
 </ul>
 

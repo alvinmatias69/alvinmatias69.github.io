@@ -129,7 +129,7 @@ $ cat response_decoded
 It works! With a simple change, we can remove dependency to generated code.
 Although, there are few concerns regarding this approach.
 - Payload needs to be in protobuf text format, which is not widely known (and might not be standard).
-- Due to `popen` unidirectional nature, we need to have temporary file to store either the input or output. (there's a `popen2` implementation that address this exact concern, but that's non-standar AFAIK)
+- Due to `popen` unidirectional nature, we need to have temporary file to store either the input or output. (there's a `popen2` implementation that address this exact concern, but that's non-standard AFAIK)
 - Performance and utilization also might not be optimal, considering we need to fork and executing shell everytime.
 
 Fortunately, because the `protoc` support the on the fly encoding and its [library](https://github.com/protocolbuffers/protobuf) is also open source.
