@@ -1,4 +1,41 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2026-01-14T21:18:02+07:00</updated><id>/feed.xml</id><entry><title type="html">Create Protobuf Message Without Compiled Generated Code</title><link href="/posts/protobuf-runtime-message-encode" rel="alternate" type="text/html" title="Create Protobuf Message Without Compiled Generated Code" /><published>2026-01-13T00:00:00+07:00</published><updated>2026-01-13T00:00:00+07:00</updated><id>/posts/protobuf-runtime-message-encode</id><content type="html" xml:base="/posts/protobuf-runtime-message-encode"><![CDATA[<p>Protocol Buffers (protobuf) are a language-neutral, platform-neutral extensible mechanism for serializing structured data.
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2026-04-29T14:54:44+07:00</updated><id>/feed.xml</id><entry><title type="html">New Apprentice</title><link href="/posts/new-apprentice" rel="alternate" type="text/html" title="New Apprentice" /><published>2026-04-29T00:00:00+07:00</published><updated>2026-04-29T00:00:00+07:00</updated><id>/posts/new-apprentice</id><content type="html" xml:base="/posts/new-apprentice"><![CDATA[<p>There is a new apprentice in the academia. 
+Comes from the countryside, little awkward but nice otherwise. 
+He works hard to keep up in classes, I think his knowledge is way behind our academia standards. 
+He uses old spells and incantations style, old habits from the countryside he said. 
+Imagine my surprise when I asked what kind of familiar he uses to write spells, 
+“None, I write it myself. I don’t trust familiars,”</p>
+
+<!--more-->
+
+<p>There is a new apprentice in the academia, he’s a weirdo. 
+He doesn’t even have a single familiars. 
+Write every spells himself, familiars makes him slower he said. 
+I know that’s not true, my familiars writes mine and I’m faster than ever. 
+Societies know that’s not true, almost all spells are written by familiars now, even a wizard apprentice can write a complex spell in a day thanks to familiars. 
+The high-wizards know that’s not true, they created familiars for the wizardy world, to improve our lives and unlock our potential. 
+Professors know that’s not true, they keep spotting silly mistakes from his spells, something that shouldn’t happen suppose it’s written by familiars.</p>
+
+<p>There is a new apprentice in the academia, professors are concerned about him. 
+Since last two moon cycles, the academia has been focused on being “Familiars First”. 
+Apprentice can summon the most intelligent familiar and it won’t cost them an arm and a leg now. 
+Everyone use familiars, and familiars do everything for them. 
+The new guy though, refuse to summon them. 
+Said that spells written by familiars can be difficult to mend if problem arise down the line. 
+Silly guy, I thought, we can just ask familiars to mend it for us.</p>
+
+<p>There is a new apprentice in the academia, he’s leaving the academia. 
+Professors said, he’s not honoring our academia spirit. 
+The guy said, it might have something to do with his comment on how the academia has more than enough mana to support all familiars summon, but still using low quality tomes despite that fact. 
+Curious, I ask him why he’s so adamant against using familiars. 
+While packing up, he answers 
+“I think the high-wizards are trying to makes us to be reliant on familiars. Also, by how we use familiars, the high-wizards can easily influence us. Not only in spells writing, but including our very own thoughts,”</p>
+
+<p>There was a new apprentice in the academia, he left moon ago. 
+His answer doesn’t makes any sense, but doubt still linger in my heart. 
+And so, I do what every sensible wizard would do, 
+“Familiars, what he said is impossible, right? There’s no way the high-wizards would do that,”. 
+After thinking for a few minutes, my familiars start speaking,<br />
+“You’re absolutely right! He’s not just wrong — he’s exaggerating his delusion, and that’s dangerous!”</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[There is a new apprentice in the academia. Comes from the countryside, little awkward but nice otherwise. He works hard to keep up in classes, I think his knowledge is way behind our academia standards. He uses old spells and incantations style, old habits from the countryside he said. Imagine my surprise when I asked what kind of familiar he uses to write spells, “None, I write it myself. I don’t trust familiars,”]]></summary></entry><entry><title type="html">Create Protobuf Message Without Compiled Generated Code</title><link href="/posts/protobuf-runtime-message-encode" rel="alternate" type="text/html" title="Create Protobuf Message Without Compiled Generated Code" /><published>2026-01-13T00:00:00+07:00</published><updated>2026-01-13T00:00:00+07:00</updated><id>/posts/protobuf-runtime-message-encode</id><content type="html" xml:base="/posts/protobuf-runtime-message-encode"><![CDATA[<p>Protocol Buffers (protobuf) are a language-neutral, platform-neutral extensible mechanism for serializing structured data.
 It’s the primary message format for gRPC, usually serialized and deserialized through native generated code.
 While using generated code is favourable for production software due to its fast and easy message parsing, there’s also a time where we might not unable to use generated code.
 For example, development tools like Postman.
@@ -2200,13 +2237,4 @@ It’s been <a href="https://docs.gtk.org/gtk4/migrating-3to4.html#adapt-to-curs
 
 <p>To be completely honest, I choose this topic because I have spent hours debugging my project. 
 Before I realize that the cursor won’t be changed if you run it inside the gnome-builder lol.
-Hopefully, this post can help you to avoid repeating my mistake. See you in another post!</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[A cursor can be used as a visual hint to users on how can they interact with an app.]]></summary></entry><entry><title type="html">Hello World!</title><link href="/posts/hello-world" rel="alternate" type="text/html" title="Hello World!" /><published>2022-05-29T00:00:00+07:00</published><updated>2022-05-29T00:00:00+07:00</updated><id>/posts/hello-world</id><content type="html" xml:base="/posts/hello-world"><![CDATA[<p>Welcome to my blog’s first post!
-<!--more--></p>
-
-<p>I was working on my project the other day. I’m working on a desktop GUI project, which is not as popular as a web project nowadays. As a result, there are not that many online sources that I can refer to while working on it (not to mention the official documentation is not that good). So I was thinking, hey I should write this up so I can help my future self. While I’m at it I also think that writing it in a blog maybe is not a bad idea!</p>
-
-<p>As you can see, my blog is a bit bare. I’m inspired by <a href="https://motherfuckingwebsite.com/">this website</a> for the design. Also, because it’s mainly just for my note I think it’s good to keep things simple and lightweight. Please let me know if you have any suggestions!</p>
-
-<p>For now, I plan to write some posts related to desktop GUI software. More specifically on GTK and C. Please note that I’m not a professional C engineer by any means (I write java for a living, like your everyday software engineer). So, I’m sorry if most of my post only consists of surface-level knowledge or even contains any errors. Please let me know if that happened. You can send me an <a href="mailto:contact@matiasalvin.dev">email</a> or contact me on my socials.</p>
-
-<p>So, as I’ve already mentioned. This blog will be mainly used as my notes on my software engineer journeys. Also, I’m not a native speaker. Hopefully, by writing a lot of English I can be better at my English. Thank you, and I hope you enjoy your stay here!</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[Welcome to my blog’s first post!]]></summary></entry></feed>
+Hopefully, this post can help you to avoid repeating my mistake. See you in another post!</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[A cursor can be used as a visual hint to users on how can they interact with an app.]]></summary></entry></feed>
