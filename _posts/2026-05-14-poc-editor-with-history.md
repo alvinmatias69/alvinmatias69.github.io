@@ -292,6 +292,7 @@ This solution is far from perfect, most notably.
 - Only support for plain text.
 - False positive might arise and polluted the data (e.g. pasting for reference source / article URL).
 - Editor can mock their text input using javascript to simulate typing.
+- Huge document might be difficult to handle, as the client rebuild every text from scratch.
 
 Therefore, more extensive security and fine-tuning are needed before it can be production ready.
 

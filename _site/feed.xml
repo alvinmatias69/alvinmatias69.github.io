@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2026-05-17T17:25:31+07:00</updated><id>/feed.xml</id><entry><title type="html">PoC: Text Editor With History</title><link href="/posts/poc-editor-with-history" rel="alternate" type="text/html" title="PoC: Text Editor With History" /><published>2026-05-14T00:00:00+07:00</published><updated>2026-05-14T00:00:00+07:00</updated><id>/posts/poc-editor-with-history</id><content type="html" xml:base="/posts/poc-editor-with-history"><![CDATA[<p>The other day, I saw a post from someone who’s concerned about grading their students assignment.
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2026-05-17T20:21:11+07:00</updated><id>/feed.xml</id><entry><title type="html">PoC: Text Editor With History</title><link href="/posts/poc-editor-with-history" rel="alternate" type="text/html" title="PoC: Text Editor With History" /><published>2026-05-14T00:00:00+07:00</published><updated>2026-05-14T00:00:00+07:00</updated><id>/posts/poc-editor-with-history</id><content type="html" xml:base="/posts/poc-editor-with-history"><![CDATA[<p>The other day, I saw a post from someone who’s concerned about grading their students assignment.
 They are not sure whether their student did their assignment genuinely.
 Someone in the reply said that he asked their students to save the draft from time to time just to make sure.
 Some had used google docs edit history unfortunately to no avail.
@@ -277,6 +277,7 @@ This solution is far from perfect, most notably.</p>
   <li>Only support for plain text.</li>
   <li>False positive might arise and polluted the data (e.g. pasting for reference source / article URL).</li>
   <li>Editor can mock their text input using javascript to simulate typing.</li>
+  <li>Huge document might be difficult to handle, as the client rebuild every text from scratch.</li>
 </ul>
 
 <p>Therefore, more extensive security and fine-tuning are needed before it can be production ready.</p>
