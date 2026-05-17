@@ -1,4 +1,295 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2026-04-29T14:54:44+07:00</updated><id>/feed.xml</id><entry><title type="html">New Apprentice</title><link href="/posts/new-apprentice" rel="alternate" type="text/html" title="New Apprentice" /><published>2026-04-29T00:00:00+07:00</published><updated>2026-04-29T00:00:00+07:00</updated><id>/posts/new-apprentice</id><content type="html" xml:base="/posts/new-apprentice"><![CDATA[<p>There is a new apprentice in the academia. 
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.2.2">Jekyll</generator><link href="/feed.xml" rel="self" type="application/atom+xml" /><link href="/" rel="alternate" type="text/html" /><updated>2026-05-17T17:25:31+07:00</updated><id>/feed.xml</id><entry><title type="html">PoC: Text Editor With History</title><link href="/posts/poc-editor-with-history" rel="alternate" type="text/html" title="PoC: Text Editor With History" /><published>2026-05-14T00:00:00+07:00</published><updated>2026-05-14T00:00:00+07:00</updated><id>/posts/poc-editor-with-history</id><content type="html" xml:base="/posts/poc-editor-with-history"><![CDATA[<p>The other day, I saw a post from someone who’s concerned about grading their students assignment.
+They are not sure whether their student did their assignment genuinely.
+Someone in the reply said that he asked their students to save the draft from time to time just to make sure.
+Some had used google docs edit history unfortunately to no avail.
+They said that sometimes typed words are detected as a chunk and can’t distinguish that with copy-pasted texts.
+This intrigued me, as I think this is something that can and maybe already done.
+<!--more--></p>
+
+<p>Before we start, let’s have refresher on how the online text editing works. 
+One of the commonly used algorithm is Operational Transform (OT).
+To put it simply instead of syncing the whole document, OT do it on operational basis (hence the name).</p>
+
+<p>Take a look at example below, cursor position is indicated by <code class="language-plaintext highlighter-rouge">C</code> (index 3).</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Hello 
+^^^^^
+01234
+   C
+</code></pre></div></div>
+
+<p>Now if we type an input <code class="language-plaintext highlighter-rouge">x</code>, we’ll have the following state.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Helxlo
+^^^^^^
+012345
+    C
+</code></pre></div></div>
+
+<p>Instead of sending the whole string, OT will instead send the new operation.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Add(3, 'x')
+</code></pre></div></div>
+
+<p>The notation might be different between each implementation, but the main idea still apply.
+It will send the operation name (<code class="language-plaintext highlighter-rouge">Add</code>), its position (<code class="language-plaintext highlighter-rouge">3</code>), and the value (<code class="language-plaintext highlighter-rouge">x</code>).</p>
+
+<p>For deletion, the value won’t be sent.</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Helxlo -&gt; Hello
+^^^^^^    ^^^^^
+012345    01234
+   C        C
+   
+Payload:
+Delete(3)
+</code></pre></div></div>
+
+<p>Using those operations, we can easily recreate the text without even knowing the full text data.</p>
+
+<blockquote>
+  <p>For multiple users OT, timestamp for each operations might be required.
+As multiple users OT will have consistency model to synchronize operations between those users.
+Timestamp is needed for the model to determine which operation should be applied first.
+Multiple users OT are out of scope, but readers are encouraged to explore.</p>
+</blockquote>
+
+<p>Now, if we take the operational persistent aspect of the OT, we can make a text editor that “remember” their editing history!</p>
+
+<h1 id="design">Design</h1>
+
+<pre class="mermaid">
+    sequenceDiagram
+        actor User
+        participant Editor
+        participant Viewer
+        participant Backend
+
+    User-&gt;&gt;Editor: Add change to editor
+    Editor-&gt;&gt;Backend: Save operations request
+    Backend--&gt;&gt;Editor: Save operations result
+    Editor--&gt;&gt;User: Add change result
+    
+    User-&gt;&gt;Viewer: Get document data
+    Viewer-&gt;&gt;Backend: Get document operations request
+    Backend--&gt;&gt;Viewer: Get document operations result
+    Viewer--&gt;&gt;User: Get rendered document data
+</pre>
+
+<p>This project is quite simple, users can interact using two interfaces: editor and viewer.
+Both interfaces are utilizing html <code class="language-plaintext highlighter-rouge">textarea</code> as it has (almost) all required elements for our purpose.</p>
+
+<h2 id="editor">Editor</h2>
+
+<p>User can interact using editor to modify documents.
+The editor will handle user input, and translate it to operations.
+Those operations will be sent to the backend for persistence.</p>
+
+<p>First, we need to take note of the cursor position.
+Because we’re utilizing <code class="language-plaintext highlighter-rouge">textarea</code>, this should be trivial</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Most of the times, both start and end position will be equal. </span>
+<span class="c1">// With the exception when the user is highlighting texts.</span>
+<span class="kd">function</span> <span class="nx">updateCursorPosition</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">start</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">editor</span><span class="dl">"</span><span class="p">).</span><span class="nx">selectionStart</span><span class="p">;</span>
+    <span class="nx">end</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">editor</span><span class="dl">"</span><span class="p">).</span><span class="nx">selectionEnd</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We need to hook this to event so we can update our position data accordingly.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">editor</span><span class="dl">"</span><span class="p">).</span><span class="nx">addEventListener</span><span class="p">(</span><span class="dl">"</span><span class="s2">keyup</span><span class="dl">"</span><span class="p">,</span> <span class="nx">e</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">updateCursorPosition</span><span class="p">();</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>The idea here is that, after every keystroke the cursor position might change (including typing and arrow key).
+Hence, hooking this will guarantee us the latest position.
+Note that we’re using <code class="language-plaintext highlighter-rouge">keyup</code> event rather than <code class="language-plaintext highlighter-rouge">keydown</code>, because we want the cursor position <strong>before</strong> the update was happening (more on this later).</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">editor</span><span class="dl">"</span><span class="p">).</span><span class="nx">addEventListener</span><span class="p">(</span><span class="dl">"</span><span class="s2">selectionchange</span><span class="dl">"</span><span class="p">,</span> <span class="nx">e</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">updatePosition</span><span class="p">();</span>
+<span class="p">});</span>
+</code></pre></div></div>
+<p>We also have to consider that the user might click on the document to change the cursor position.
+Hence, <code class="language-plaintext highlighter-rouge">selectionchange</code> event is also needed.
+As this event will fired everytime the user change the cursor position using mouse click.</p>
+
+<p>After that, the value of each input is also need to be tracked.</p>
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">editor</span><span class="dl">"</span><span class="p">).</span><span class="nx">addEventListener</span><span class="p">(</span><span class="dl">"</span><span class="s2">input</span><span class="dl">"</span><span class="p">,</span> <span class="nx">e</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="p">...</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">input</code> event has <code class="language-plaintext highlighter-rouge">inputType</code> property, which will indicate the type of change itself (e.g. inserting or deleting).
+Each type has their own characteristic, for example the change payload will be one character for <code class="language-plaintext highlighter-rouge">insertText</code> type and empty for deletion type (e.g. <code class="language-plaintext highlighter-rouge">deleteWordForward</code>), and so on.
+Therefore, proper mapping are required to capture all changes to the text accurately.</p>
+
+<blockquote>
+  <p>As of this writing, there are <a href="https://w3c.github.io/input-events/#interface-InputEvent-Attributes">46</a> input event types.
+Not all of them are implemented for this proof of concept, only some crucial ones.
+The full event mapping is left as an exercise for the reader.</p>
+</blockquote>
+
+<p>Additionally, we need to send the operation timestamp.
+So, the operations order can be preserved.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">EVENT_MAP</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="dl">"</span><span class="s2">insertText</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">INSERT</span><span class="dl">"</span><span class="p">,</span>
+    <span class="dl">"</span><span class="s2">deleteWordBackward</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">DELETE</span><span class="dl">"</span><span class="p">,</span>
+    <span class="p">...</span>
+<span class="p">};</span>
+
+<span class="kd">let</span> <span class="nx">operations</span> <span class="o">=</span> <span class="p">[];</span>
+
+<span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">editor</span><span class="dl">"</span><span class="p">).</span><span class="nx">addEventListener</span><span class="p">(</span><span class="dl">"</span><span class="s2">input</span><span class="dl">"</span><span class="p">,</span> <span class="nx">e</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">data</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="na">value</span><span class="p">:</span> <span class="nx">e</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span>
+        <span class="na">position_start</span><span class="p">:</span> <span class="nx">start</span><span class="p">,</span>
+        <span class="na">position_end</span><span class="p">:</span> <span class="nx">end</span><span class="p">,</span>
+        <span class="na">operation</span><span class="p">:</span> <span class="nx">EVENT_MAP</span><span class="p">[</span><span class="nx">e</span><span class="p">.</span><span class="nx">inputType</span><span class="p">],</span>
+        <span class="na">timestamp</span><span class="p">:</span> <span class="p">(</span><span class="k">new</span> <span class="nb">Date</span><span class="p">()).</span><span class="nx">toISOString</span><span class="p">(),</span>
+    <span class="p">};</span>
+
+    <span class="nx">operations</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+    <span class="nx">debounce</span><span class="p">();</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>To avoid tons of request to our backend for every changes, we use a simple debounce to do batch requests.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">let</span> <span class="nx">timeoutID</span><span class="p">;</span>
+
+<span class="kd">function</span> <span class="nx">debounce</span><span class="p">()</span> <span class="p">{</span>
+    <span class="nx">clearTimeout</span><span class="p">(</span><span class="nx">timeoutID</span><span class="p">);</span>
+    <span class="nx">timeoutID</span> <span class="o">=</span> <span class="nx">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="nx">sendOperations</span><span class="p">(</span><span class="nx">operations</span><span class="p">);</span>
+    <span class="p">},</span> <span class="mi">1000</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<h2 id="viewer">Viewer</h2>
+
+<p>User then can view the document later, complete with the changes histories.
+Ideally, the viewers also need to be able iterate on the entries, to determine whether the change is legitimate.</p>
+
+<p>When the viewer client open a document, backend will send a list of operations consists on that document.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="err">operations:</span><span class="w"> </span><span class="p">[</span><span class="w">
+        </span><span class="p">{</span><span class="w">
+            </span><span class="err">value:</span><span class="w"> </span><span class="s2">"h"</span><span class="p">,</span><span class="w">
+            </span><span class="err">position_start:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="err">position_end:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+            </span><span class="err">operation:</span><span class="w"> </span><span class="s2">"INSERT"</span><span class="w">
+        </span><span class="p">},</span><span class="w">
+        </span><span class="err">...</span><span class="w">
+    </span><span class="p">]</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The client then need to build the document by piecing together those operations.</p>
+
+<p>On our PoC, there are two kind of operations: <code class="language-plaintext highlighter-rouge">INSERT</code> and <code class="language-plaintext highlighter-rouge">DELETE</code>.
+While both are self explanatory, they need each their own handling for creating the final document.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">constructEditor</span><span class="p">(</span><span class="nx">config</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">let</span> <span class="nx">value</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">editor</span><span class="dl">"</span><span class="p">).</span><span class="nx">value</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">event</span> <span class="k">of</span> <span class="nx">operations</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">operation</span> <span class="o">===</span> <span class="dl">"</span><span class="s2">INSERT</span><span class="dl">"</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">value</span> <span class="o">=</span> <span class="nx">value</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">position_start</span><span class="p">)</span> <span class="o">+</span> <span class="nx">event</span><span class="p">.</span><span class="nx">value</span> <span class="o">+</span> <span class="nx">value</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">position_end</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="nb">document</span><span class="p">.</span><span class="nx">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">editor</span><span class="dl">"</span><span class="p">).</span><span class="nx">value</span> <span class="o">=</span> <span class="nx">value</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>For <code class="language-plaintext highlighter-rouge">INSERT</code> operation, the logic is straightforward.
+We put the payload <code class="language-plaintext highlighter-rouge">value</code> between two substring based on the payload position.
+Notice that we’re using <code class="language-plaintext highlighter-rouge">position_start</code> for the prefix cutoff and <code class="language-plaintext highlighter-rouge">position_end</code> for the suffix start position.
+While, the value will be the same for a simple input operation.
+When a user is highlighting multiple characters and then do the typing, practically replacing the highlighted characters, the value will be different based on the highlight start and end position.
+By doing this, we ensure that the highlighted text will be removed before we insert the payload value.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">constructEditor</span><span class="p">(</span><span class="nx">config</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">event</span> <span class="k">of</span> <span class="nx">operations</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">operation</span> <span class="o">===</span> <span class="dl">"</span><span class="s2">DELETE</span><span class="dl">"</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">value</span> <span class="o">=</span> <span class="nx">value</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">event</span><span class="p">.</span><span class="nx">position_start</span><span class="p">)</span> <span class="o">+</span> <span class="nx">value</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">position_end</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>To handle <code class="language-plaintext highlighter-rouge">DELETE</code> operation, we can simply modify the <code class="language-plaintext highlighter-rouge">INSERT</code> logic without inserting the payload <code class="language-plaintext highlighter-rouge">VALUE</code>.
+The catch is that, this logic only works for multiple characters deletion.
+For a single character deletion, all it’ll do is just combining the substring without resulting in any changes.
+Therefore, we need to adjust the deletion logic accordingly.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nx">constructEditor</span><span class="p">(</span><span class="nx">config</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">event</span> <span class="k">of</span> <span class="nx">operations</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">operation</span> <span class="o">===</span> <span class="dl">"</span><span class="s2">DELETE</span><span class="dl">"</span><span class="p">)</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">start</span> <span class="o">=</span> <span class="nx">event</span><span class="p">.</span><span class="nx">position_start</span> <span class="o">===</span> <span class="nx">event</span><span class="p">.</span><span class="nx">position_end</span>
+                  <span class="p">?</span> <span class="nx">event</span><span class="p">.</span><span class="nx">position_start</span> <span class="o">-</span> <span class="mi">1</span>
+                  <span class="p">:</span> <span class="nx">event</span><span class="p">.</span><span class="nx">position_start</span><span class="p">;</span>
+            <span class="nx">value</span> <span class="o">=</span> <span class="nx">value</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">start</span><span class="p">)</span> <span class="o">+</span> <span class="nx">value</span><span class="p">.</span><span class="nx">slice</span><span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">position_end</span><span class="p">,</span> <span class="nx">value</span><span class="p">.</span><span class="nx">length</span><span class="p">);</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Because our goals is to determined whether the content of a document is just a simple copy-paste, we can add a simple logic to catch this.</p>
+
+<div class="language-javascript highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">let</span> <span class="nx">suspiciousOperations</span> <span class="o">=</span> <span class="p">[];</span>
+
+<span class="kd">function</span> <span class="nx">constructEditor</span><span class="p">(</span><span class="nx">config</span><span class="p">)</span> <span class="p">{</span>
+    <span class="p">...</span>
+    <span class="k">for</span> <span class="p">(</span><span class="kd">const</span> <span class="nx">event</span> <span class="k">of</span> <span class="nx">operations</span><span class="p">)</span> <span class="p">{</span>
+        <span class="p">...</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nx">event</span><span class="p">.</span><span class="nx">value</span><span class="p">.</span><span class="nx">length</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">suspiciousOperations</span><span class="p">.</span><span class="nx">push</span><span class="p">(</span><span class="nx">event</span><span class="p">);</span>
+        <span class="p">}</span> 
+    <span class="p">}</span>
+    <span class="p">...</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>For a copy-paste payload, the value length will be more than one.
+As the <code class="language-plaintext highlighter-rouge">insertFromPaste</code> input event will have the whole clipboard paste data as the event value.</p>
+
+<p>Then using those simple interfaces, we can build us an editor that can “remember” the editing histories and catch if the content is a simple copy and paste.
+You can check the working PoC here: <a href="https://editor.matiasalvin.dev">Editor History</a></p>
+
+<blockquote>
+  <p>Note: the live PoC also has several features not included in this post (e.g. finalized document, single user editor, etc).
+Because those features are both trivial to implement and not related to OT algorithm, their explanations are ommited.
+Reader can refer to the project <a href="https://github.com/alvinmatias69/editor-history">repository</a> for more informations.</p>
+</blockquote>
+
+<h1 id="closing-and-forethought">Closing and Forethought</h1>
+
+<p>While this PoC might works to catch copy-paste text content.
+This solution is far from perfect, most notably.</p>
+
+<ul>
+  <li>Only support for plain text.</li>
+  <li>False positive might arise and polluted the data (e.g. pasting for reference source / article URL).</li>
+  <li>Editor can mock their text input using javascript to simulate typing.</li>
+</ul>
+
+<p>Therefore, more extensive security and fine-tuning are needed before it can be production ready.</p>
+
+<p>While this is not a new idea (I think some coding test platforms already implemented this),
+general editor with history could be helpful. 
+Especially in the academia where the process is as important as the final result itself.</p>
+
+<p>As a final note, I’d say that it’s quite refreshing to write some plain javascript after all this time.
+The code might be spaghetti and contains lot of bugs (it’s only powered by plain javascript and cans of Strong Zero after all). 
+But I can assure you that everything on my blog is and always will be 100% made by human.</p>
+
+<p>Thanks for reading, please let me know what do you think!</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[The other day, I saw a post from someone who’s concerned about grading their students assignment. They are not sure whether their student did their assignment genuinely. Someone in the reply said that he asked their students to save the draft from time to time just to make sure. Some had used google docs edit history unfortunately to no avail. They said that sometimes typed words are detected as a chunk and can’t distinguish that with copy-pasted texts. This intrigued me, as I think this is something that can and maybe already done.]]></summary></entry><entry><title type="html">New Apprentice</title><link href="/posts/new-apprentice" rel="alternate" type="text/html" title="New Apprentice" /><published>2026-04-29T00:00:00+07:00</published><updated>2026-04-29T00:00:00+07:00</updated><id>/posts/new-apprentice</id><content type="html" xml:base="/posts/new-apprentice"><![CDATA[<p>There is a new apprentice in the academia. 
 Comes from the countryside, little awkward but nice otherwise. 
 He works hard to keep up in classes, I think his knowledge is way behind our academia standards. 
 He uses old spells and incantations style, old habits from the countryside he said. 
@@ -2160,81 +2451,4 @@ Or make an editor extension for cgentest, especially for emacs.</p>
 
 <p>Now, the storage usage is only about 14Gb, even after installing all of my additional software. The machine is also more snappy and doesn’t turn off without plugging into power. Even though the journey is not exactly smooth, I’m quite happy with the result. Not only the laptop is usable again, but I also learn so much while configuring it.</p>
 
-<p>Well, I’m not exactly solved all of the problems. As currently, I’m not sure how to dispose of the old battery. I’ve found <code class="language-plaintext highlighter-rouge">octopus</code>, an Indonesian-based startup that handles e-waste. But, I haven’t tried it yet. Maybe I’ll make a review after trying it. In the meantime, please let me know if you have any information on e-waste disposal in Indonesia. See you in another post!</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[Nowadays, most people will choose to buy a new electronic device rather than fix their broken device. Most devices are difficult to fix and it’s not cheap either. Hence, most people might feel like it’s not worth fixing it. So, why do I choose to fix mine?]]></summary></entry><entry><title type="html">GTK4 Cursor Manipulation</title><link href="/posts/gtk4-cursor" rel="alternate" type="text/html" title="GTK4 Cursor Manipulation" /><published>2022-06-02T00:00:00+07:00</published><updated>2022-06-02T00:00:00+07:00</updated><id>/posts/gtk4-cursor</id><content type="html" xml:base="/posts/gtk4-cursor"><![CDATA[<p>A cursor can be used as a visual hint to users on how can they interact with an app. 
-<!--more-->
-For example, for a <code class="language-plaintext highlighter-rouge">pointer</code> cursor, it is implied that an element is clickable. 
-<code class="language-plaintext highlighter-rouge">Progress</code> cursor indicates that the application is currently working, and the user should wait.</p>
-
-<p>In this post, we’ll look at various method we can use to modify cursor in GTK4.</p>
-
-<h2 id="change-cursor-on-hover">Change Cursor on Hover</h2>
-
-<p>This usecase is used to give users a hint on how they can interact with an application element. In example <code class="language-plaintext highlighter-rouge">pointer</code> cursor over a button, <code class="language-plaintext highlighter-rouge">text</code> cursor over a text input, and so on.</p>
-
-<p>Thankfully, unlike in GTK3, we can invoke a function call to set this instead of setting up the event manually. We have two functions for this:</p>
-<ul>
-  <li><a href="https://docs.gtk.org/gtk4/method.Widget.set_cursor.html">gtk_widget_set_cursor</a></li>
-  <li><a href="https://docs.gtk.org/gtk4/method.Widget.set_cursor_from_name.html">gtk_widget_set_cursor_from_name</a></li>
-</ul>
-
-<h3 id="gtk_widget_set_cursor">gtk_widget_set_cursor</h3>
-
-<p>This function took 2 parameters. Widget pointer and cursor object. 
-The Widget parameter is straightforward, it is the widget that we are going to give the hover cursor.
-The cursor parameter is a gdk object and it is nullable. In case the parameter is null, it will use the default cursor.</p>
-
-<p>Take a look at the below snippet:</p>
-<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">GtkButton</span> <span class="o">*</span><span class="n">btn</span> <span class="o">=</span> <span class="n">gtk_button_new_with_label</span><span class="p">(</span><span class="s">"hover me"</span><span class="p">);</span>
-<span class="n">GdkCursor</span> <span class="o">*</span><span class="n">cursor</span> <span class="o">=</span> <span class="n">gdk_cursor_new_from_name</span><span class="p">(</span><span class="s">"pointer"</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
-<span class="n">gtk_widget_set_cursor</span><span class="p">(</span><span class="n">btn</span><span class="p">,</span> <span class="n">cursor</span><span class="p">);</span>
-</code></pre></div></div>
-
-<p>Above, we created a new button and cursor. 
-The cursor is a gdk object with a pointer as the cursor. 
-You can refer to the <a href="https://docs.gtk.org/gdk4/ctor.Cursor.new_from_name.html">gdk documentation</a> for the list of available cursor names. 
-Alternatively, you can use a custom image as a cursor with <a href="https://docs.gtk.org/gdk4/ctor.Cursor.new_from_texture.html">gdk_cursor_new_from_texture</a>.</p>
-
-<blockquote>
-  <p>Note: if you are developing in <a href="https://wiki.gnome.org/Apps/Builder">Gnome Builder</a> the cursor might not be changed if you run your project using the gui apps (<code class="language-plaintext highlighter-rouge">ctrl+f5</code>).
-You need to export the bundle and then run it manually (or install the exported flatpak project first) to make it work.</p>
-</blockquote>
-
-<video autoplay="autoplay" loop="loop" width="60%" height="auto" controls="">
-    <source src="/assets/videos/gtk4_cursors/cursor.mp4" type="video/mp4" />
-</video>
-
-<p>As you can see the cursor is automatically changed to pointer once it’s hovering on the button. In the next section, we’ll look at how to simplify this process even more.</p>
-
-<h3 id="gtk_widget_set_cursor_from_name">gtk_widget_set_cursor_from_name</h3>
-
-<p>GTK has provided us with a shortcut for the above snippet. Take a look at the below snippet:</p>
-<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">GtkButton</span> <span class="o">*</span><span class="n">btn</span> <span class="o">=</span> <span class="n">gtk_button_new_with_label</span><span class="p">(</span><span class="s">"hover me simple"</span><span class="p">);</span>
-<span class="n">gtk_widget_set_cursor_from_name</span><span class="p">(</span><span class="n">btn</span><span class="p">,</span> <span class="s">"pointer"</span><span class="p">);</span>
-</code></pre></div></div>
-
-<p>Using <code class="language-plaintext highlighter-rouge">gtk_widget_set_cursor_from_name</code> we can simply provide the cursor type name, without any need to create the cursor object ourselves.
-Take note that the cursor name is nullable. In this case, the widget will use the cursor inherited from the parent widget.</p>
-
-<video autoplay="autoplay" loop="loop" width="60%" height="auto" controls="">
-    <source src="/assets/videos/gtk4_cursors/cursor_with_name.mp4" type="video/mp4" />
-</video>
-
-<h2 id="change-cursor-for-window">Change Cursor for Window</h2>
-
-<p>In GTK3 we have <a href="https://docs.gtk.org/gdk3/method.Window.set_cursor.html">gdk_window_set_cursor</a> which will change the cursor for a given window.
-It’s been <a href="https://docs.gtk.org/gtk4/migrating-3to4.html#adapt-to-cursor-api-changes">deprecated</a> in GTK4. Instead, we can use the function above by passing the window as our widget.</p>
-<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">GtkWidget</span> <span class="o">*</span><span class="n">window</span> <span class="o">=</span> <span class="n">gtk_application_window_new</span> <span class="p">(</span><span class="n">app</span><span class="p">);</span>
-<span class="n">gtk_widget_set_cursor_from_name</span><span class="p">(</span><span class="n">window</span><span class="p">,</span> <span class="s">"pointer"</span><span class="p">);</span>
-</code></pre></div></div>
-
-<p>As you can see, there’s no different than the previous snippet. The only difference is that we pass the window as a widget in exchange for the previous button.</p>
-
-<video autoplay="autoplay" loop="loop" width="60%" height="auto" controls="">
-    <source src="/assets/videos/gtk4_cursors/window.mp4" type="video/mp4" />
-</video>
-
-<hr />
-
-<p>To be completely honest, I choose this topic because I have spent hours debugging my project. 
-Before I realize that the cursor won’t be changed if you run it inside the gnome-builder lol.
-Hopefully, this post can help you to avoid repeating my mistake. See you in another post!</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[A cursor can be used as a visual hint to users on how can they interact with an app.]]></summary></entry></feed>
+<p>Well, I’m not exactly solved all of the problems. As currently, I’m not sure how to dispose of the old battery. I’ve found <code class="language-plaintext highlighter-rouge">octopus</code>, an Indonesian-based startup that handles e-waste. But, I haven’t tried it yet. Maybe I’ll make a review after trying it. In the meantime, please let me know if you have any information on e-waste disposal in Indonesia. See you in another post!</p>]]></content><author><name>mat</name></author><summary type="html"><![CDATA[Nowadays, most people will choose to buy a new electronic device rather than fix their broken device. Most devices are difficult to fix and it’s not cheap either. Hence, most people might feel like it’s not worth fixing it. So, why do I choose to fix mine?]]></summary></entry></feed>

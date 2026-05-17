@@ -51,6 +51,10 @@ pre {
     border-radius: 0.3em;
 }
 
+pre.mermaid {
+    background-color: transparent;
+}
+
 pre code {
     color: #f8f8f2;
 }
